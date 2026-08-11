@@ -1,0 +1,10 @@
+{
+  "name": "StormLens Weather",
+  "short_name": "StormLens",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#070b12",
+  "theme_color": "#070b12",
+  "description": "A radar-first weather and storm tracking app.",
+  "icons": []
+}
