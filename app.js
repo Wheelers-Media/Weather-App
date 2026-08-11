@@ -1,18 +1,42 @@
 (() => {
   const DEFAULT_LOCATION = {
-    name: 'Grande Prairie', admin1: 'Alberta', country: 'Canada', latitude: 55.1707, longitude: -118.7884, timezone: 'America/Edmonton'
+    name: 'Calgary', admin1: 'Alberta', country: 'Canada', countryCode: 'CA', provinceCode: 'AB',
+    latitude: 51.0447, longitude: -114.0719, timezone: 'America/Edmonton', source: 'default'
   };
+  const OLD_DEFAULT = { latitude: 55.1707, longitude: -118.7884 };
+
+  function migrateDefaultLocation() {
+    const stored = JSON.parse(localStorage.getItem('stormlens-location') || 'null');
+    const hasMigration = localStorage.getItem('stormlens-calgary-default-v2') === '1';
+    if (!stored) return DEFAULT_LOCATION;
+    const wasOldDefault = Math.abs(stored.latitude - OLD_DEFAULT.latitude) < .01 && Math.abs(stored.longitude - OLD_DEFAULT.longitude) < .01;
+    if (!hasMigration && wasOldDefault) return DEFAULT_LOCATION;
+    return stored;
+  }
+
+  function migrateSavedLocations() {
+    const stored = JSON.parse(localStorage.getItem('stormlens-saved') || 'null');
+    if (!stored?.length) return [DEFAULT_LOCATION];
+    const hasMigration = localStorage.getItem('stormlens-calgary-default-v2') === '1';
+    if (!hasMigration && stored.length === 1 && Math.abs(stored[0].latitude - OLD_DEFAULT.latitude) < .01 && Math.abs(stored[0].longitude - OLD_DEFAULT.longitude) < .01) return [DEFAULT_LOCATION];
+    if (!stored.some(x => Math.abs(x.latitude - DEFAULT_LOCATION.latitude) < .01 && Math.abs(x.longitude - DEFAULT_LOCATION.longitude) < .01)) return [DEFAULT_LOCATION, ...stored];
+    return stored;
+  }
 
   const state = {
-    location: JSON.parse(localStorage.getItem('stormlens-location') || 'null') || DEFAULT_LOCATION,
-    savedLocations: JSON.parse(localStorage.getItem('stormlens-saved') || 'null') || [DEFAULT_LOCATION],
+    location: migrateDefaultLocation(),
+    savedLocations: migrateSavedLocations(),
     settings: Object.assign({ tempUnit: 'celsius', windUnit: 'kmh', radarOpacity: 78, radarSpeed: 650 }, JSON.parse(localStorage.getItem('stormlens-settings') || '{}')),
     weather: null,
+    airQuality: null,
+    alerts: [],
     fetchedAt: null,
+    alertsFetchedAt: null,
     map: null,
     baseLayer: null,
     weatherLayer: null,
     alertsLayer: null,
+    localAlertGeoLayer: null,
     activeMapLayer: 'radar',
     alertsEnabled: false,
     radarTimes: [],
@@ -20,15 +44,25 @@
     radarTimer: null,
     selectedModel: 'auto',
     modelData: null,
-    searchTimer: null
+    searchTimer: null,
+    locating: false,
+    installPrompt: null
   };
+  localStorage.setItem('stormlens-calgary-default-v2', '1');
+  localStorage.setItem('stormlens-location', JSON.stringify(state.location));
+  localStorage.setItem('stormlens-saved', JSON.stringify(state.savedLocations));
 
   const WMS = 'https://geo.weather.gc.ca/geomet?';
+  const ALERTS_API = 'https://api.weather.gc.ca/collections/weather-alerts/items';
   const LAYERS = {
-    radar: { id: 'RADAR_1KM_RRAI', label: 'Observed radar', mode: 'OBSERVED RADAR' },
-    nowcast: { id: 'Radar_1km_RainPrecipRate-Extrapolation', label: 'Radar nowcast', mode: 'RADAR NOWCAST' },
+    radar: { id: 'RADAR_1KM_RRAI', label: 'Observed radar', mode: 'OBSERVED RADAR', style: 'RADARURPPRECIPR14-LINEAR' },
+    nowcast: { id: 'Radar_1km_RainPrecipRate-Extrapolation', label: 'Radar nowcast', mode: 'RADAR NOWCAST', style: 'RADARURPPRECIPR14-LINEAR' },
+    futureprecip: { id: 'HRDPS.CONTINENTAL_RT', label: 'Future precipitation · 48h', mode: 'FORECAST PRECIPITATION' },
     preciptype: { id: 'Radar_1km_SfcPrecipType', label: 'Precipitation type', mode: 'PRECIPITATION TYPE' },
-    lightning: { id: 'Lightning_2.5km_Density', label: 'Lightning density', mode: 'LIGHTNING DENSITY' },
+    precipprob: { id: 'HRDPS-WEonG_2.5km_Precip-Prob', label: 'Precipitation probability', mode: 'FORECAST PROBABILITY' },
+    temperature: { id: 'HRDPS-WEonG_2.5km_AirTemp', label: 'Temperature', mode: 'FORECAST TEMPERATURE' },
+    windgust: { id: 'HRDPS-WEonG_2.5km_WindGust', label: 'Wind gust', mode: 'FORECAST WIND GUSTS' },
+    lightning: { id: 'Lightning_2.5km_Density', label: 'Lightning density', mode: 'LIGHTNING DENSITY', style: 'Lightning' },
     storms: { id: 'HRDPS-WEonG_2.5km_Thunderstorm-Prob', label: 'Thunderstorm probability', mode: 'THUNDERSTORM FORECAST' }
   };
 
@@ -50,13 +84,60 @@
     updateHeader();
     syncSettingsUI();
     renderSavedLocations();
+    updateLocationPermissionStatus();
+    bindInstallPrompt();
     loadWeather();
     registerServiceWorker();
     refreshIcons();
+    if (!localStorage.getItem('stormlens-location-choice-v1')) {
+      setTimeout(() => openModal('locationPermissionModal'), 550);
+    }
   }
 
   function registerServiceWorker() {
     if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+
+
+  function bindInstallPrompt() {
+    const btn = $('#installAppBtn');
+    const status = $('#installAppStatus');
+    if (!btn || !status) return;
+    const standalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (standalone) {
+      status.textContent = 'Installed';
+      btn.textContent = 'Installed';
+      btn.disabled = true;
+    } else {
+      status.textContent = 'Ready when Chrome offers install';
+    }
+
+    window.addEventListener('beforeinstallprompt', event => {
+      event.preventDefault();
+      state.installPrompt = event;
+      status.textContent = 'Ready to install';
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="download"></i> Install';
+      refreshIcons();
+    });
+
+    btn.addEventListener('click', async () => {
+      if (!state.installPrompt) {
+        toast('In Chrome, open the ⋮ menu and choose Add to Home screen or Install app.');
+        return;
+      }
+      state.installPrompt.prompt();
+      await state.installPrompt.userChoice.catch(() => null);
+      state.installPrompt = null;
+    });
+
+    window.addEventListener('appinstalled', () => {
+      status.textContent = 'Installed';
+      btn.textContent = 'Installed';
+      btn.disabled = true;
+      state.installPrompt = null;
+      toast('StormLens installed.');
+    });
   }
 
   function refreshIcons() {
@@ -87,8 +168,21 @@
     $('#settingsBtn').addEventListener('click', () => openModal('settingsModal'));
     $('#addLocationBtn').addEventListener('click', () => { closeModal('locationsModal'); openModal('searchModal'); });
     document.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.close)));
-    document.querySelectorAll('.modal-backdrop').forEach(modal => modal.addEventListener('click', e => { if (e.target === modal) closeModal(modal.id); }));
+    document.querySelectorAll('.modal-backdrop').forEach(modal => modal.addEventListener('click', e => {
+      if (e.target === modal && !modal.dataset.locked) closeModal(modal.id);
+    }));
     document.querySelector('[data-default-location]').addEventListener('click', () => selectLocation(DEFAULT_LOCATION, true));
+    $('#allowLocationBtn')?.addEventListener('click', () => {
+      localStorage.setItem('stormlens-location-choice-v1', 'asked');
+      useGeolocation({ closePermissionModal: true });
+    });
+    $('#keepCalgaryBtn')?.addEventListener('click', () => {
+      localStorage.setItem('stormlens-location-choice-v1', 'calgary');
+      closeModal('locationPermissionModal');
+      selectLocation(DEFAULT_LOCATION, true);
+    });
+    $('#settingsLocationBtn')?.addEventListener('click', () => useGeolocation());
+    $('#alertDetailClose')?.addEventListener('click', () => closeModal('alertDetailModal'));
   }
 
   function openModal(id) { const el = $('#' + id); el.hidden = false; refreshIcons(); if (id === 'searchModal') setTimeout(() => $('#locationSearchInput').focus(), 150); }
@@ -101,7 +195,7 @@
       if (q.length < 2) return;
       state.searchTimer = setTimeout(() => searchLocations(q), 260);
     });
-    $('#useMyLocationBtn').addEventListener('click', useGeolocation);
+    $('#useMyLocationBtn').addEventListener('click', () => useGeolocation());
   }
 
   async function searchLocations(query) {
@@ -122,7 +216,11 @@
         </button>`).join('');
       box.querySelectorAll('[data-result-index]').forEach(btn => btn.addEventListener('click', () => {
         const r = results[Number(btn.dataset.resultIndex)];
-        selectLocation({ name:r.name, admin1:r.admin1 || '', country:r.country || '', latitude:r.latitude, longitude:r.longitude, timezone:r.timezone || 'auto' }, true);
+        selectLocation({
+          name:r.name, admin1:r.admin1 || '', country:r.country || '', countryCode:r.country_code || '',
+          provinceCode: provinceCodeFromName(r.admin1 || ''), latitude:r.latitude, longitude:r.longitude,
+          timezone:r.timezone || 'auto', source:'search'
+        }, true);
       }));
       refreshIcons();
     } catch (err) {
@@ -130,33 +228,93 @@
     }
   }
 
-  function useGeolocation() {
+  function useGeolocation(options = {}) {
     if (!navigator.geolocation) return toast('Location services are not supported by this browser.');
-    toast('Getting your location…');
+    if (state.locating) return;
+    state.locating = true;
+    const btn = $('#allowLocationBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-circle"></i> Finding you…'; refreshIcons(); }
+    toast('Requesting precise location…');
+
     navigator.geolocation.getCurrentPosition(async pos => {
-      const loc = { name:'Current location', admin1:'', country:'', latitude:pos.coords.latitude, longitude:pos.coords.longitude, timezone:'auto' };
+      const loc = {
+        name:'Current location', admin1:'', country:'', countryCode:'', provinceCode:'',
+        latitude:pos.coords.latitude, longitude:pos.coords.longitude, timezone:'auto',
+        source:'device', accuracy:Math.round(pos.coords.accuracy || 0)
+      };
       try {
-        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${loc.latitude}&longitude=${loc.longitude}&language=en&format=json`);
+        // BigDataCloud's free client-side reverse geocoder is designed for the device's own consented coordinates.
+        const params = new URLSearchParams({
+          latitude: loc.latitude, longitude: loc.longitude, localityLanguage:'en'
+        });
+        const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?${params}`);
         if (res.ok) {
           const d = await res.json();
-          const r = d.results?.[0];
-          if (r) Object.assign(loc, { name:r.name || loc.name, admin1:r.admin1 || '', country:r.country || '', timezone:r.timezone || 'auto' });
+          loc.name = d.city || d.locality || d.principalSubdivision || loc.name;
+          loc.admin1 = d.principalSubdivision || '';
+          loc.country = d.countryName || '';
+          loc.countryCode = d.countryCode || '';
+          loc.provinceCode = provinceCodeFromName(loc.admin1);
         }
       } catch (_) {}
+
+      localStorage.setItem('stormlens-location-choice-v1', 'device');
+      if (options.closePermissionModal) closeModal('locationPermissionModal');
       selectLocation(loc, false);
-    }, () => toast('Location permission was not granted.'), { enableHighAccuracy:true, timeout:10000 });
+      updateLocationPermissionStatus('granted');
+      state.locating = false;
+      resetLocationButton();
+      toast(`Using ${loc.name}.`);
+    }, err => {
+      state.locating = false;
+      resetLocationButton();
+      updateLocationPermissionStatus(err.code === 1 ? 'denied' : 'unavailable');
+      if (options.closePermissionModal && err.code !== 1) closeModal('locationPermissionModal');
+      const message = err.code === 1
+        ? 'Location permission was denied. You can enable it in Chrome site settings at any time.'
+        : 'Could not get your location. Calgary will stay selected.';
+      toast(message);
+    }, { enableHighAccuracy:true, timeout:15000, maximumAge:120000 });
+  }
+
+  function resetLocationButton() {
+    const btn = $('#allowLocationBtn');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="locate-fixed"></i> Use my location'; refreshIcons(); }
+  }
+
+  async function updateLocationPermissionStatus(forced) {
+    const label = $('#locationPermissionStatus');
+    let status = forced || 'prompt';
+    try {
+      if (!forced && navigator.permissions?.query) status = (await navigator.permissions.query({ name:'geolocation' })).state;
+    } catch (_) {}
+    if (!label) return;
+    const messages = {
+      granted: state.location.source === 'device' ? `On · ${state.location.name}` : 'Allowed',
+      denied: 'Blocked in browser settings',
+      unavailable: 'Unavailable',
+      prompt: 'Not requested yet'
+    };
+    label.textContent = messages[status] || 'Not requested yet';
   }
 
   function selectLocation(loc, save) {
     state.location = loc;
+    state.airQuality = null;
+    state.alerts = [];
+    state.modelData = null;
     localStorage.setItem('stormlens-location', JSON.stringify(loc));
     if (save && !state.savedLocations.some(x => Math.abs(x.latitude-loc.latitude)<.001 && Math.abs(x.longitude-loc.longitude)<.001)) {
       state.savedLocations.unshift(loc);
       localStorage.setItem('stormlens-saved', JSON.stringify(state.savedLocations));
     }
     closeModal('searchModal'); closeModal('locationsModal');
-    updateHeader(); renderSavedLocations();
-    if (state.map) state.map.setView([loc.latitude, loc.longitude], 7);
+    updateHeader(); renderSavedLocations(); updateLocationPermissionStatus();
+    if (state.map) {
+      state.map.setView([loc.latitude, loc.longitude], 8);
+      addUserMarker();
+      if (state.alertsEnabled) renderLocalAlertPolygons();
+    }
     loadWeather();
   }
 
@@ -195,33 +353,177 @@
     const home = $('#homeContent');
     home.classList.add('loading-state');
     if (!state.weather) home.innerHTML = '<div class="skeleton hero-skeleton"></div><div class="skeleton card-skeleton"></div><div class="skeleton card-skeleton"></div>';
+
+    const { latitude, longitude } = state.location;
+    const params = new URLSearchParams({
+      latitude, longitude, timezone:'auto', forecast_days:'16',
+      temperature_unit: state.settings.tempUnit,
+      wind_speed_unit: state.settings.windUnit,
+      current:'temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,snowfall,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m,visibility',
+      hourly:'temperature_2m,apparent_temperature,precipitation_probability,precipitation,rain,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,relative_humidity_2m,dew_point_2m,pressure_msl,cloud_cover,cape,visibility',
+      daily:'weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_sum,rain_sum,snowfall_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,sunrise,sunset,uv_index_max'
+    });
+
     try {
-      const { latitude, longitude } = state.location;
-      const params = new URLSearchParams({
-        latitude, longitude, timezone:'auto', forecast_days:'16',
-        temperature_unit: state.settings.tempUnit,
-        wind_speed_unit: state.settings.windUnit,
-        current:'temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,snowfall,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m,visibility',
-        hourly:'temperature_2m,apparent_temperature,precipitation_probability,precipitation,rain,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,relative_humidity_2m,dew_point_2m,pressure_msl,cloud_cover,cape,visibility',
-        daily:'weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_sum,rain_sum,snowfall_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,sunrise,sunset,uv_index_max'
+      const forecastPromise = fetch(`https://api.open-meteo.com/v1/forecast?${params}`).then(async res => {
+        if (!res.ok) throw new Error(`Forecast service returned ${res.status}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.reason || 'Forecast error');
+        return data;
       });
-      const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
-      if (!res.ok) throw new Error(`Forecast service returned ${res.status}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.reason || 'Forecast error');
-      state.weather = data;
+
+      const [forecastResult, airResult, alertResult] = await Promise.allSettled([
+        forecastPromise,
+        loadAirQuality(latitude, longitude),
+        loadAlerts()
+      ]);
+
+      if (forecastResult.status !== 'fulfilled') throw forecastResult.reason;
+      state.weather = forecastResult.value;
       state.fetchedAt = new Date();
-      localStorage.setItem('stormlens-weather-cache', JSON.stringify({ data, location:state.location, fetchedAt:state.fetchedAt.toISOString() }));
+
+      if (airResult.status === 'fulfilled') state.airQuality = airResult.value;
+      if (alertResult.status === 'fulfilled') {
+        state.alerts = alertResult.value;
+        state.alertsFetchedAt = new Date();
+      }
+
+      localStorage.setItem('stormlens-weather-cache', JSON.stringify({
+        data: state.weather,
+        airQuality: state.airQuality,
+        alerts: state.alerts,
+        location:state.location,
+        fetchedAt:state.fetchedAt.toISOString()
+      }));
+
       renderHome(); renderForecast(); renderStorms();
+      if (state.map && state.alertsEnabled) renderLocalAlertPolygons();
     } catch (err) {
       const cache = JSON.parse(localStorage.getItem('stormlens-weather-cache') || 'null');
-      if (cache?.data && cache?.location && Math.abs(cache.location.latitude-state.location.latitude)<.01) {
-        state.weather = cache.data; state.fetchedAt = new Date(cache.fetchedAt); renderHome(); renderForecast(); renderStorms(); toast('Live update failed. Showing cached weather.');
+      if (cache?.data && cache?.location && Math.abs(cache.location.latitude-state.location.latitude)<.01 && Math.abs(cache.location.longitude-state.location.longitude)<.01) {
+        state.weather = cache.data;
+        state.airQuality = cache.airQuality || null;
+        state.alerts = cache.alerts || [];
+        state.fetchedAt = new Date(cache.fetchedAt);
+        renderHome(); renderForecast(); renderStorms();
+        toast('Live update failed. Showing cached weather.');
       } else {
         home.innerHTML = `<div class="error-card" style="margin-top:20px"><h3>Weather could not load</h3><p>${escapeHtml(err.message)}. Check your connection and try again.</p><button id="retryWeather">Try again</button></div>`;
         $('#retryWeather')?.addEventListener('click', loadWeather);
       }
-    } finally { home.classList.remove('loading-state'); refreshIcons(); }
+    } finally {
+      home.classList.remove('loading-state');
+      refreshIcons();
+    }
+  }
+
+  async function loadAirQuality(latitude, longitude) {
+    const params = new URLSearchParams({
+      latitude, longitude, timezone:'auto',
+      current:'us_aqi,pm2_5,pm10,ozone'
+    });
+    const res = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`);
+    if (!res.ok) throw new Error(`Air quality service returned ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.reason || 'Air quality error');
+    return data;
+  }
+
+  async function loadAlerts() {
+    const province = state.location.provinceCode || provinceCodeFromName(state.location.admin1 || '');
+    const isCanada = (state.location.countryCode || '').toUpperCase() === 'CA' || /canada/i.test(state.location.country || '');
+    if (!isCanada || !province) return [];
+
+    const params = new URLSearchParams({
+      f:'json',
+      limit:'100',
+      filter:`properties.province=${province}`
+    });
+    const res = await fetch(`${ALERTS_API}?${params}`);
+    if (!res.ok) throw new Error(`ECCC alerts returned ${res.status}`);
+    const data = await res.json();
+    const features = data.features || [];
+    const point = [Number(state.location.longitude), Number(state.location.latitude)];
+    const local = features.filter(feature => geometryContainsPoint(feature.geometry, point));
+    if (local.length) return local;
+
+    // Some alert products can be area-named without a usable polygon. Keep only obvious local-name matches as a conservative fallback.
+    const needle = String(state.location.name || '').toLowerCase();
+    return features.filter(feature => needle.length > 2 && String(feature.properties?.feature_name_en || '').toLowerCase().includes(needle));
+  }
+
+  function renderActiveAlerts() {
+    if (!state.alerts?.length) return '';
+    const alerts = state.alerts.slice(0, 4);
+    return `<section class="active-alerts">
+      <div class="section-kicker"><span class="eyebrow">OFFICIAL ECCC ALERTS</span><span>${alerts.length}</span></div>
+      ${alerts.map((feature, i) => {
+        const p = feature.properties || {};
+        const level = alertRiskClass(p);
+        const title = p.alert_name_en || p.alert_short_name_en || 'Weather alert';
+        const area = p.feature_name_en || state.location.name;
+        const expires = p.expiration_datetime || p.event_end_datetime;
+        return `<button class="alert-card alert-${level}" data-alert-index="${i}">
+          <span class="alert-icon"><i data-lucide="triangle-alert"></i></span>
+          <span class="alert-copy"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(area)}${expires ? ` · until ${escapeHtml(formatAlertTime(expires))}` : ''}</small></span>
+          <i data-lucide="chevron-right"></i>
+        </button>`;
+      }).join('')}
+    </section>`;
+  }
+
+  function bindAlertCards(root = document) {
+    root.querySelectorAll('[data-alert-index]').forEach(btn => btn.addEventListener('click', () => {
+      const feature = state.alerts[Number(btn.dataset.alertIndex)];
+      if (feature) showAlertDetail(feature);
+    }));
+  }
+
+  function showAlertDetail(feature) {
+    const p = feature.properties || {};
+    const title = p.alert_name_en || p.alert_short_name_en || 'Weather alert';
+    const area = p.feature_name_en || state.location.name;
+    const timing = [p.publication_datetime && `Issued ${formatAlertTime(p.publication_datetime)}`, (p.expiration_datetime || p.event_end_datetime) && `Ends ${formatAlertTime(p.expiration_datetime || p.event_end_datetime)}`].filter(Boolean).join(' · ');
+    $('#alertDetailContent').innerHTML = `
+      <div class="alert-detail-severity alert-${alertRiskClass(p)}"><i data-lucide="triangle-alert"></i>${escapeHtml(p.alert_type || 'Alert')}</div>
+      <h2>${escapeHtml(title)}</h2>
+      <p class="alert-detail-area">${escapeHtml(area)}</p>
+      ${timing ? `<p class="alert-detail-time">${escapeHtml(timing)}</p>` : ''}
+      ${p.alert_text_en ? `<div class="alert-detail-text">${sanitizeAlertText(p.alert_text_en)}</div>` : '<p class="alert-detail-text">Full alert text is not available from this response.</p>'}
+      <div class="alert-source-note">Source: Environment and Climate Change Canada</div>`;
+    openModal('alertDetailModal');
+    refreshIcons();
+  }
+
+  function sanitizeAlertText(text) {
+    return escapeHtml(String(text || '')).replace(/\r?\n/g, '<br>');
+  }
+
+  function alertRiskClass(p = {}) {
+    const risk = String(p.risk_colour_en || '').toLowerCase();
+    const type = String(p.alert_type || '').toLowerCase();
+    if (risk.includes('red') || type.includes('warning')) return 'warning';
+    if (risk.includes('orange') || type.includes('watch')) return 'watch';
+    if (risk.includes('yellow') || type.includes('advisory')) return 'advisory';
+    return 'statement';
+  }
+
+  function formatAlertTime(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString(undefined, { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+  }
+
+  function aqiLabel(value) {
+    const v = Number(value);
+    if (!Number.isFinite(v)) return 'Unavailable';
+    if (v <= 50) return 'Good';
+    if (v <= 100) return 'Moderate';
+    if (v <= 150) return 'Unhealthy for sensitive groups';
+    if (v <= 200) return 'Unhealthy';
+    if (v <= 300) return 'Very unhealthy';
+    return 'Hazardous';
   }
 
   function renderHome() {
@@ -249,6 +551,8 @@
         <p class="smart-summary">${escapeHtml(buildSmartSummary(nowIdx))}</p>
       </div>
 
+      ${renderActiveAlerts()}
+
       <article class="panel card-pad">
         <div class="card-head"><div><span class="eyebrow">PRECIPITATION</span><h2>${precipInfo.title}</h2></div><div class="side-value"><strong>${h.precipitation_probability[nowIdx] ?? 0}%</strong><small>right now</small></div></div>
         <div class="precip-overview">
@@ -269,12 +573,14 @@
         ${metricCard('gauge','Pressure',`${round(c.pressure_msl)} hPa`, pressureTrend(nowIdx))}
         ${metricCard('eye','Visibility',formatVisibility(c.visibility),`${round(c.cloud_cover)}% cloud cover`)}
         ${metricCard('sun','UV index',`${round(d.uv_index_max?.[0] ?? 0)}`,uvLabel(d.uv_index_max?.[0] ?? 0))}
+        ${metricCard('wind','Air quality',state.airQuality?.current?.us_aqi != null ? `${round(state.airQuality.current.us_aqi)} AQI` : '—',state.airQuality?.current?.us_aqi != null ? aqiLabel(state.airQuality.current.us_aqi) : 'Unavailable')}
         ${metricCard('sunrise','Sunrise',formatLocalTime(d.sunrise[0]),`Sunset ${formatLocalTime(d.sunset[0])}`)}
       </div>
 
       <div class="section-title"><div><span class="eyebrow">OUTLOOK</span><h2>Next 16 days</h2></div></div>
       <article class="panel card-pad daily-list">${renderDailyRows()}</article>
       <div style="height:10px"></div>`;
+    bindAlertCards($('#homeContent'));
     refreshIcons();
   }
 
@@ -392,20 +698,44 @@
 
   function renderStorms() {
     if(!state.weather)return;
-    const h=state.weather.hourly, idx=nearestTimeIndex(h.time,new Date()), cape=Math.max(...(h.cape?.slice(idx,idx+12)||[0]).filter(Number.isFinite),0), pop=Math.max(...h.precipitation_probability.slice(idx,idx+12)), gust=Math.max(...h.wind_gusts_10m.slice(idx,idx+12)), codes=h.weather_code.slice(idx,idx+12); const risk=stormRisk(cape,pop,codes);
+    const h=state.weather.hourly;
+    const idx=nearestTimeIndex(h.time,new Date());
+    const cape=Math.max(...(h.cape?.slice(idx,idx+12)||[0]).filter(Number.isFinite),0);
+    const pop=Math.max(...h.precipitation_probability.slice(idx,idx+12));
+    const gust=Math.max(...h.wind_gusts_10m.slice(idx,idx+12));
+    const codes=h.weather_code.slice(idx,idx+12);
+    const risk=stormRisk(cape,pop,codes);
+    const officialCount = state.alerts?.length || 0;
+
     $('#stormsContent').innerHTML=`
       <div class="section-title"><div><span class="eyebrow">CONVECTIVE WEATHER</span><h2>Storms near you</h2></div></div>
-      <div class="storm-hero"><span class="storm-status"><b class="status-dot"></b>FORECAST SIGNAL</span><h1>${risk.headline}</h1><p>${risk.summary}</p><button class="primary-button" id="openStormMap"><i data-lucide="radar"></i> Open storm map</button></div>
+      ${officialCount ? `<div class="storm-alert-banner"><i data-lucide="triangle-alert"></i><div><strong>${officialCount} official alert${officialCount===1?'':'s'} for ${escapeHtml(state.location.name)}</strong><small>Environment and Climate Change Canada</small></div></div>` : ''}
+      <div class="storm-hero">
+        <span class="storm-status"><b class="status-dot"></b>FORECAST SIGNAL</span>
+        <h1>${risk.headline}</h1><p>${risk.summary}</p>
+        <div class="storm-action-row">
+          <button class="primary-button" id="openStormMap"><i data-lucide="radar"></i> Storm radar</button>
+          <button class="secondary-action-button" id="openLightningMap"><i data-lucide="zap"></i> Lightning</button>
+        </div>
+      </div>
       <div class="storm-grid">
         ${stormMetric('activity','CAPE',`${round(cape)} J/kg`)}
         ${stormMetric('cloud-rain','Rain chance',`${round(pop)}%`)}
         ${stormMetric('wind','Peak gust',`${round(gust)} ${({kmh:'km/h',mph:'mph',kn:'kt',ms:'m/s'})[state.settings.windUnit]}`)}
-        ${stormMetric('zap','Lightning','ECCC map layer')}
+        ${stormMetric('triangle-alert','Official alerts',`${officialCount}`)}
       </div>
       <div class="section-title"><div><span class="eyebrow">OUTLOOK</span><h2>Thunderstorm potential</h2></div></div>
       <div class="outlook-strip">${renderOutlooks(idx)}</div>
-      <article class="panel card-pad" style="margin-top:14px"><div class="card-head"><div><span class="eyebrow">REAL DATA LAYERS</span><h3>Built for storm watching</h3></div></div><p style="margin:0;color:var(--muted);font-size:12px;line-height:1.6">The map uses official ECCC radar, extrapolated radar nowcast, lightning-density analysis, thunderstorm-probability guidance and alert layers. Observed and forecast products stay visually distinct.</p></article>`;
-    $('#openStormMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>setMapLayer('storms'),120); }); refreshIcons();
+      ${officialCount ? `<div class="section-title"><div><span class="eyebrow">ALERT DETAILS</span><h2>Active for your location</h2></div></div><div class="storm-alert-list">${renderActiveAlerts()}</div>` : ''}
+      <article class="panel card-pad" style="margin-top:14px">
+        <div class="card-head"><div><span class="eyebrow">REAL DATA LAYERS</span><h3>Built for storm watching</h3></div></div>
+        <p style="margin:0;color:var(--muted);font-size:12px;line-height:1.6">The map uses official ECCC radar, radar extrapolation nowcast, lightning-density analysis, thunderstorm-probability guidance and alert polygons. Lightning is displayed as density data, not invented strike counts.</p>
+      </article>`;
+
+    $('#openStormMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>setMapLayer('storms'),120); });
+    $('#openLightningMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>setMapLayer('lightning'),120); });
+    bindAlertCards($('#stormsContent'));
+    refreshIcons();
   }
 
   function stormMetric(icon,label,value){return `<div class="storm-metric"><i data-lucide="${icon}"></i><small>${label}</small><strong>${value}</strong></div>`;}
@@ -442,9 +772,18 @@
     stopRadar(); state.activeMapLayer=key;
     if(state.weatherLayer) state.map.removeLayer(state.weatherLayer);
     const cfg=LAYERS[key];
-    state.weatherLayer=L.tileLayer.wms(WMS,{layers:cfg.id,format:'image/png',transparent:true,opacity:state.settings.radarOpacity/100,version:'1.3.0',uppercase:true}).addTo(state.map);
+    state.weatherLayer=L.tileLayer.wms(WMS,{
+      layers:cfg.id,
+      styles:cfg.style || '',
+      format:'image/png',
+      transparent:true,
+      opacity:state.settings.radarOpacity/100,
+      version:'1.3.0',
+      uppercase:true
+    }).addTo(state.map);
     $('#mapLayerStatus').textContent=cfg.label;
     $('#radarModeLabel').textContent=cfg.mode;
+    $('#timelineStartLabel').textContent=['futureprecip','storms','precipprob','temperature','windgust'].includes(key) ? 'NOW' : 'PAST';
     document.querySelectorAll('#quickLayers [data-layer]').forEach(b=>b.classList.toggle('active',b.dataset.layer===key));
     document.querySelectorAll('[data-select-layer]').forEach(b=>b.classList.toggle('active',b.dataset.selectLayer===key));
     await loadLayerTimes(cfg.id);
@@ -461,7 +800,9 @@
       const dim=target?.querySelector('Dimension[name="time"], Extent[name="time"]');
       state.radarTimes=parseTimeDimension(dim?.textContent?.trim()||'');
       if(!state.radarTimes.length) { state.radarIndex=0; $('#radarTimeline').max=0; $('#radarTimeline').value=0; ts.textContent='Latest available'; return; }
-      state.radarIndex=state.radarTimes.length-1; $('#radarTimeline').min=0; $('#radarTimeline').max=state.radarTimes.length-1; $('#radarTimeline').value=state.radarIndex; applyRadarTime();
+      const forecastLike=['nowcast','futureprecip','storms','precipprob','temperature','windgust'].includes(state.activeMapLayer);
+      state.radarIndex=forecastLike ? nearestTimeIndex(state.radarTimes,new Date()) : state.radarTimes.length-1;
+      $('#radarTimeline').min=0; $('#radarTimeline').max=state.radarTimes.length-1; $('#radarTimeline').value=state.radarIndex; applyRadarTime();
     } catch(err) { state.radarTimes=[]; ts.textContent='Latest available'; }
   }
 
@@ -478,7 +819,21 @@
 
   function parseISODuration(v){ if(!v)return 360000; const m=v.match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/); if(!m)return 360000; return (((+m[1]||0)*24+(+m[2]||0))*60+(+m[3]||0))*60000+(+m[4]||0)*1000; }
 
-  function applyRadarTime(){ if(!state.radarTimes.length||!state.weatherLayer)return; const time=state.radarTimes[state.radarIndex]; state.weatherLayer.setParams({time},false); $('#radarTimeline').value=state.radarIndex; const d=new Date(time); $('#radarTimestamp').textContent=d.toLocaleString(undefined,{weekday:'short',hour:'numeric',minute:'2-digit'}); }
+  function applyRadarTime(){
+    if(!state.radarTimes.length||!state.weatherLayer)return;
+    const time=state.radarTimes[state.radarIndex];
+    state.weatherLayer.setParams({time},false);
+    $('#radarTimeline').value=state.radarIndex;
+    const d=new Date(time);
+    const deltaMin=Math.round((d.getTime()-Date.now())/60000);
+    const cfg=LAYERS[state.activeMapLayer];
+    let mode=cfg?.mode || 'WEATHER LAYER';
+    if(state.activeMapLayer==='nowcast') mode=deltaMin > 0 ? 'FORECAST NOWCAST' : 'OBSERVED / NOWCAST';
+    if(state.activeMapLayer==='radar') mode='OBSERVED RADAR';
+    $('#radarModeLabel').textContent=mode;
+    $('#radarTimestamp').textContent=d.toLocaleString(undefined,{weekday:'short',hour:'numeric',minute:'2-digit'});
+    $('#timelineNowLabel').textContent=deltaMin > 6 ? `+${deltaMin} MIN` : deltaMin < -6 ? `${Math.abs(deltaMin)} MIN AGO` : 'NOW';
+  }
   function stepRadar(dir){ if(!state.radarTimes.length)return; state.radarIndex=Math.max(0,Math.min(state.radarTimes.length-1,state.radarIndex+dir));applyRadarTime(); }
   function playRadar(){ if(!state.radarTimes.length)return; if(state.radarIndex>=state.radarTimes.length-1) state.radarIndex=0; state.radarTimer=setInterval(()=>{ if(state.radarIndex>=state.radarTimes.length-1) state.radarIndex=0; else state.radarIndex++; applyRadarTime(); },state.settings.radarSpeed); $('#radarPlay').innerHTML='<i data-lucide="pause"></i>'; refreshIcons(); }
   function stopRadar(){ if(state.radarTimer){clearInterval(state.radarTimer);state.radarTimer=null;} const b=$('#radarPlay'); if(b)b.innerHTML='<i data-lucide="play"></i>'; refreshIcons(); }
@@ -486,11 +841,87 @@
   function updateMapLegend(key){ const el=$('#radarLegend'); if(key==='lightning') el.innerHTML='<span>Density of detected lightning activity</span>'; else if(key==='storms') el.innerHTML='<span>Forecast thunderstorm probability from ECCC guidance</span>'; else el.innerHTML='<span><b class="legend-dot l1"></b>Light</span><span><b class="legend-dot l2"></b>Moderate</span><span><b class="legend-dot l3"></b>Heavy</span><span><b class="legend-dot l4"></b>Intense</span>'; }
 
   function toggleAlerts() {
-    if(!state.map)return; state.alertsEnabled=!state.alertsEnabled;
+    if(!state.map)return;
+    state.alertsEnabled=!state.alertsEnabled;
     document.querySelectorAll('[data-layer="alerts"], [data-toggle-alerts]').forEach(b=>b.classList.toggle('active',state.alertsEnabled));
-    if(state.alertsEnabled){ state.alertsLayer=L.tileLayer.wms(WMS,{layers:'ALERTS',format:'image/png',transparent:true,opacity:.9,version:'1.3.0',uppercase:true}).addTo(state.map); toast('Official ECCC alert layer enabled.'); }
-    else if(state.alertsLayer){state.map.removeLayer(state.alertsLayer);state.alertsLayer=null;}
+    if(state.alertsEnabled){
+      state.alertsLayer=L.tileLayer.wms(WMS,{
+        layers:'Current-Alerts',
+        styles:'Current-Alerts',
+        format:'image/png',
+        transparent:true,
+        opacity:.92,
+        version:'1.3.0',
+        uppercase:true
+      }).addTo(state.map);
+      renderLocalAlertPolygons();
+      toast(state.alerts.length ? `${state.alerts.length} local ECCC alert${state.alerts.length===1?'':'s'} found.` : 'Official ECCC alert layer enabled.');
+    } else {
+      if(state.alertsLayer){state.map.removeLayer(state.alertsLayer);state.alertsLayer=null;}
+      if(state.localAlertGeoLayer){state.map.removeLayer(state.localAlertGeoLayer);state.localAlertGeoLayer=null;}
+    }
   }
+
+  function renderLocalAlertPolygons() {
+    if (!state.map) return;
+    if (state.localAlertGeoLayer) {
+      state.map.removeLayer(state.localAlertGeoLayer);
+      state.localAlertGeoLayer = null;
+    }
+    const features = (state.alerts || []).filter(f => f.geometry);
+    if (!features.length || !state.alertsEnabled) return;
+    state.localAlertGeoLayer = L.geoJSON({ type:'FeatureCollection', features }, {
+      style: feature => {
+        const level = alertRiskClass(feature.properties || {});
+        const colours = {
+          warning:'#ff566b',
+          watch:'#ff9f43',
+          advisory:'#ffd85b',
+          statement:'#77baff'
+        };
+        return { color:colours[level] || '#77baff', weight:2, fillOpacity:.08, opacity:.95 };
+      },
+      onEachFeature: (feature, layer) => {
+        const p = feature.properties || {};
+        layer.bindPopup(`<strong>${escapeHtml(p.alert_name_en || 'Weather alert')}</strong><br>${escapeHtml(p.feature_name_en || state.location.name)}`);
+      }
+    }).addTo(state.map);
+  }
+
+  function geometryContainsPoint(geometry, point) {
+    if (!geometry || !point) return false;
+    const [x, y] = point;
+    const inRing = ring => {
+      let inside = false;
+      for (let i=0, j=ring.length-1; i<ring.length; j=i++) {
+        const xi=Number(ring[i][0]), yi=Number(ring[i][1]);
+        const xj=Number(ring[j][0]), yj=Number(ring[j][1]);
+        const intersect=((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/((yj-yi)||Number.EPSILON)+xi);
+        if(intersect) inside=!inside;
+      }
+      return inside;
+    };
+    const inPolygon = poly => {
+      if (!poly?.length || !inRing(poly[0])) return false;
+      for (let i=1;i<poly.length;i++) if (inRing(poly[i])) return false;
+      return true;
+    };
+    if (geometry.type === 'Polygon') return inPolygon(geometry.coordinates);
+    if (geometry.type === 'MultiPolygon') return geometry.coordinates.some(inPolygon);
+    return false;
+  }
+
+  function provinceCodeFromName(name) {
+    const key=String(name||'').trim().toLowerCase();
+    const map={
+      'alberta':'AB','british columbia':'BC','manitoba':'MB','new brunswick':'NB',
+      'newfoundland and labrador':'NL','northwest territories':'NT','nova scotia':'NS',
+      'nunavut':'NU','ontario':'ON','prince edward island':'PE','quebec':'QC',
+      'saskatchewan':'SK','yukon':'YT'
+    };
+    return map[key] || '';
+  }
+
 
   function weatherCondition(code,isDay=true){
     const map={0:['Clear','sun'],1:['Mostly clear','sun'],2:['Partly cloudy','cloud-sun'],3:['Overcast','cloud'],45:['Fog','cloud-fog'],48:['Rime fog','cloud-fog'],51:['Light drizzle','cloud-drizzle'],53:['Drizzle','cloud-drizzle'],55:['Heavy drizzle','cloud-rain'],56:['Freezing drizzle','cloud-hail'],57:['Freezing drizzle','cloud-hail'],61:['Light rain','cloud-rain'],63:['Rain','cloud-rain'],65:['Heavy rain','cloud-rain-wind'],66:['Freezing rain','cloud-hail'],67:['Freezing rain','cloud-hail'],71:['Light snow','cloud-snow'],73:['Snow','cloud-snow'],75:['Heavy snow','snowflake'],77:['Snow grains','snowflake'],80:['Rain showers','cloud-rain'],81:['Rain showers','cloud-rain-wind'],82:['Heavy showers','cloud-rain-wind'],85:['Snow showers','cloud-snow'],86:['Heavy snow showers','snowflake'],95:['Thunderstorm','cloud-lightning'],96:['Thunderstorm + hail','cloud-lightning'],99:['Severe thunderstorm','cloud-lightning']}; const [label,icon]=map[code]||['Variable','cloud']; return{label,icon:(!isDay&&icon==='sun')?'moon':icon};
