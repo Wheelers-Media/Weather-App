@@ -37,6 +37,7 @@
     addStylesheet('map-v6.css?v=20260812-1','stormlensMapV6');
     addStylesheet('premium-data.css?v=20260812-1','premiumData');
     addScript('map-v6.js?v=20260812-1','stormlensMapV6');
+    addScript('map-v6-guard.js?v=20260812-1','stormlensMapV6Guard');
     addScript('premium-bridge.js?v=20260812-4','stormlensBridge');
   }
 
