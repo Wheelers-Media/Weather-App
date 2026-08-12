@@ -23,6 +23,7 @@ jobs:
           node --check premium-lightning.js
           node --check sw.js
           node --check scripts/check-geomet.mjs
+          node --check scripts/check-geomet-render.mjs
       - name: Check Vercel API module syntax
         run: |
           for file in api/*.js; do
@@ -34,3 +35,5 @@ jobs:
           node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
       - name: Validate live ECCC GeoMet layers
         run: node scripts/check-geomet.mjs
+      - name: Render key Calgary GeoMet products
+        run: node scripts/check-geomet-render.mjs
