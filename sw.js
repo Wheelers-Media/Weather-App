@@ -1,5 +1,5 @@
-const CACHE='stormlens-v7-maptiler-20260812-2';
-const APP=['./','./index.html','./styles.css','./desktop.css','./map-v6.css','./map-v7.css','./premium-data.css','./app.js','./radar-fix.js','./map-v6.js','./map-v6-guard.js','./map-v7-compat.js','./map-v7.js','./map-v7-runtime.js','./maptiler-env.js','./premium-bridge.js','./premium-home.js','./premium-lightning.js','./manifest.json','./icon-192.png','./icon-512.png'];
+const CACHE='stormlens-v7-maptiler-20260812-3';
+const APP=['./','./index.html','./styles.css','./desktop.css','./map-v6.css','./map-v7.css','./premium-data.css','./app.js','./radar-fix.js','./map-v6.js','./map-v6-guard.js','./map-v7-compat.js','./map-v7.js','./map-v7-runtime.js','./map-v7-watchdog.js','./maptiler-env.js','./premium-bridge.js','./premium-home.js','./premium-lightning.js','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP)));
