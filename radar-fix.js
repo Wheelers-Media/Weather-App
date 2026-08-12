@@ -1,6 +1,12 @@
 (() => {
   'use strict';
 
+  // Compatibility bridge: older cached app builds emitted the map-visible event on window,
+  // while V10 listens on document. Forward it so either build can start the map.
+  window.addEventListener('stormlens:map-screen-visible', () => {
+    document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'));
+  });
+
   function addStyle(href, id) {
     if (document.querySelector(`link[data-stormlens-v10="${id}"]`)) return Promise.resolve();
     return new Promise((resolve, reject) => {
@@ -38,14 +44,14 @@
     try {
       status('Map engine · loading', 'loading');
       await Promise.all([
-        addStyle('map-v6.css?v=20260812-10', 'shared-map-ui'),
-        addStyle('map-core-v10.css?v=20260812-1', 'map-core-v10'),
+        addStyle('map-v6.css?v=20260812-11', 'shared-map-ui'),
+        addStyle('map-core-v10.css?v=20260812-2', 'map-core-v10'),
         addStyle('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.css', 'maptiler-sdk')
       ]);
       await addScript('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.umd.min.js', 'maptiler-sdk');
       await addScript('https://cdn.maptiler.com/maptiler-weather/v3.1.1/maptiler-weather.umd.min.js', 'maptiler-weather');
-      await addScript('map-core-v10.js?v=20260812-1', 'map-core-v10');
-      await addScript('map-v10-bridge.js?v=20260812-1', 'map-v10-bridge');
+      await addScript('map-core-v10.js?v=20260812-2', 'map-core-v10');
+      await addScript('map-v10-bridge.js?v=20260812-2', 'map-v10-bridge');
       document.documentElement.dataset.mapEngine = 'v10-pending';
       if (document.getElementById('mapScreen')?.classList.contains('active')) {
         document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'));
