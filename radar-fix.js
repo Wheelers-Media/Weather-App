@@ -18,17 +18,17 @@
 
   function activeEngine() {
     const mode = document.documentElement.dataset.mapEngine;
-    if (mode === 'v7' && window.StormLensMapV7?.selectLayer) return window.StormLensMapV7;
+    if (mode === 'v8' && window.StormLensMapV8?.selectLayer) return window.StormLensMapV8;
     if (mode === 'v6' && window.StormLensMapV6?.selectLayer) return window.StormLensMapV6;
-    if (window.StormLensMapV7?.selectLayer && !fallbackStarted) return window.StormLensMapV7;
+    if (window.StormLensMapV8?.selectLayer && !fallbackStarted) return window.StormLensMapV8;
     if (window.StormLensMapV6?.selectLayer) return window.StormLensMapV6;
     return null;
   }
 
   function normalizeLegacyLayer(key, engine) {
-    const isV7 = engine === window.StormLensMapV7;
-    const stormLayer = isV7 && engine.tomorrowEnabled && engine.defs?.futureThunderstorms ? 'futureThunderstorms' : 'thunderRisk';
-    const maps = isV7 ? {
+    const isV8 = engine === window.StormLensMapV8;
+    const stormLayer = isV8 && engine.tomorrowEnabled && engine.defs?.futureThunderstorms ? 'futureThunderstorms' : 'thunderRisk';
+    const maps = isV8 ? {
       radar:'observedRadar', nowcast:'nowcast', lightning:'lightning', storms:stormLayer, alerts:'alerts',
       futureprecip:'precipitation', preciptype:'precipType', precipprob:'precipProb', temperature:'temperature', windgust:'windGust'
     } : {
@@ -66,10 +66,8 @@
       pendingLayer = { rawId, closeSheet };
       return;
     }
-
     const id = normalizeLegacyLayer(rawId, engine);
     if (!engine.defs?.[id]) return;
-
     if (switchingLayer) {
       queuedLayer = { rawId, closeSheet };
       return;
@@ -78,7 +76,6 @@
     switchingLayer = true;
     pendingLayer = null;
     setSwitchingUI(true);
-
     if (closeSheet) {
       const modal = document.getElementById('layersModal');
       if (modal) modal.hidden = true;
@@ -104,6 +101,10 @@
     requestLayer(pending.rawId, pending.closeSheet);
   }
 
+  function openMapScreen() {
+    document.querySelector('.nav-item[data-target="map"]')?.click();
+  }
+
   function installInputRouter() {
     if (routerInstalled) return;
     routerInstalled = true;
@@ -112,8 +113,7 @@
       const quick = event.target.closest?.('#quickLayers [data-layer]');
       if (quick) {
         const key = quick.dataset.layer;
-        event.preventDefault();
-        event.stopImmediatePropagation();
+        event.preventDefault(); event.stopImmediatePropagation();
         if (key === 'layers') {
           const engine = activeEngine();
           if (engine?.openLayers) engine.openLayers();
@@ -127,10 +127,10 @@
         return;
       }
 
-      const v7 = event.target.closest?.('[data-v7-weather]');
-      if (v7) {
+      const v8 = event.target.closest?.('[data-v8-weather]');
+      if (v8) {
         event.preventDefault(); event.stopImmediatePropagation();
-        requestLayer(v7.dataset.v7Weather, true);
+        requestLayer(v8.dataset.v8Weather, true);
         return;
       }
 
@@ -152,6 +152,20 @@
       if (alertToggle && !alertToggle.hidden) {
         event.preventDefault(); event.stopImmediatePropagation();
         requestLayer('alerts', true);
+        return;
+      }
+
+      if (event.target.closest?.('#openStormMap')) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        openMapScreen();
+        setTimeout(() => requestLayer('storms', false), 160);
+        return;
+      }
+
+      if (event.target.closest?.('#openLightningMap')) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        openMapScreen();
+        setTimeout(() => requestLayer('lightning', false), 160);
       }
     }, true);
 
@@ -160,8 +174,7 @@
       if (id) syncQuickSelection(id);
     });
 
-    const readyEvents = ['stormlens:map-ready','stormlens:v7-ready','stormlens:tomorrow-ready'];
-    readyEvents.forEach(name => window.addEventListener(name, () => setTimeout(flushPending, 40)));
+    ['stormlens:map-ready','stormlens:v8-ready'].forEach(name => window.addEventListener(name, () => setTimeout(flushPending, 40)));
     setInterval(flushPending, 250);
   }
 
@@ -178,9 +191,7 @@
     }
     return new Promise((resolve, reject) => {
       const link = document.createElement('link');
-      link.rel='stylesheet';
-      link.href=href;
-      link.dataset.stormlensStyle=marker;
+      link.rel='stylesheet'; link.href=href; link.dataset.stormlensStyle=marker;
       link.addEventListener('load', () => { link.dataset.loaded='true'; resolve(link); }, { once:true });
       link.addEventListener('error', () => reject(new Error(`Failed to load stylesheet ${marker}`)), { once:true });
       document.head.appendChild(link);
@@ -198,9 +209,7 @@
     }
     return new Promise((resolve,reject)=>{
       const script=document.createElement('script');
-      script.src=src;
-      script.async=false;
-      script.dataset.stormlensScript=marker;
+      script.src=src; script.async=false; script.dataset.stormlensScript=marker;
       script.addEventListener('load',()=>{script.dataset.loaded='true';resolve(script);},{once:true});
       script.addEventListener('error',()=>reject(new Error(`Failed to load ${marker}`)),{once:true});
       document.body.appendChild(script);
@@ -210,76 +219,88 @@
   function ensureLegacyAlertHook() {
     if (document.querySelector('[data-toggle-alerts]')) return;
     const button=document.createElement('button');
-    button.type='button';
-    button.hidden=true;
-    button.dataset.toggleAlerts='true';
+    button.type='button'; button.hidden=true; button.dataset.toggleAlerts='true';
     document.body.appendChild(button);
   }
 
   async function loadV6(reason='') {
     if (fallbackStarted) return;
     fallbackStarted = true;
-    try { window.StormLensMapV7?.stopPlayback?.(); } catch (_) {}
-    try { window.StormLensMapV7?.map?.remove?.(); } catch (_) {}
-    document.getElementById('stormlensMapV7')?.remove();
+    try { window.StormLensMapV8?.stopPlayback?.(); } catch (_) {}
+    try { window.StormLensMapV8?.map?.remove?.(); } catch (_) {}
+    document.getElementById('stormlensMapV8')?.remove();
     const legacy = document.getElementById('weatherMap');
     if (legacy) { legacy.style.opacity='1'; legacy.style.pointerEvents='auto'; }
     await Promise.all([
-      addStylesheet('map-v6.css?v=20260812-6','map-v6'),
+      addStylesheet('map-v6.css?v=20260812-8','map-v6'),
       addStylesheet('premium-data.css?v=20260812-1','premium-data')
     ]);
-    await loadScript('map-v6.js?v=20260812-6','map-v6');
-    await loadScript('map-v6-guard.js?v=20260812-6','map-v6-guard');
-    await loadScript('premium-bridge.js?v=20260812-8','premium-bridge-v6');
+    await loadScript('map-v6.js?v=20260812-8','map-v6');
+    await loadScript('map-v6-guard.js?v=20260812-8','map-v6-guard');
+    await loadScript('premium-bridge.js?v=20260812-9','premium-bridge-v6');
     document.documentElement.dataset.mapEngine='v6';
     flushPending();
     const status=document.getElementById('mapLayerStatus');
     if (status && reason) status.dataset.fallbackReason = reason;
   }
 
-  async function loadV7() {
+  function waitForV8Ready(timeoutMs=18000) {
+    if (document.documentElement.dataset.mapEngine === 'v8' && window.StormLensMapV8?.map) return Promise.resolve();
+    return new Promise((resolve,reject)=>{
+      let done=false;
+      const finish=(ok,error)=>{
+        if(done)return;done=true;
+        clearTimeout(timer);
+        window.removeEventListener('stormlens:v8-ready',onReady);
+        window.removeEventListener('stormlens:v8-fatal',onFatal);
+        ok?resolve():reject(error||new Error('V8 map failed'));
+      };
+      const onReady=()=>finish(true);
+      const onFatal=event=>finish(false,new Error(event.detail?.reason||'V8 map failed'));
+      const timer=setTimeout(()=>finish(false,new Error('V8 map did not become ready')),timeoutMs);
+      window.addEventListener('stormlens:v8-ready',onReady,{once:true});
+      window.addEventListener('stormlens:v8-fatal',onFatal,{once:true});
+    });
+  }
+
+  async function loadV8() {
     await Promise.all([
-      addStylesheet('map-v6.css?v=20260812-6','map-v6-shared-ui'),
-      addStylesheet('map-v7.css?v=20260812-5','map-v7'),
+      addStylesheet('map-v6.css?v=20260812-8','map-v6-shared-ui'),
+      addStylesheet('map-v8.css?v=20260812-1','map-v8'),
       addStylesheet('premium-data.css?v=20260812-1','premium-data'),
       addStylesheet('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.css','maptiler-sdk')
     ]);
-
     await loadScript('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.umd.min.js','maptiler-sdk');
     await loadScript('https://cdn.maptiler.com/maptiler-weather/v3.1.1/maptiler-weather.umd.min.js','maptiler-weather');
-    await loadScript('map-v7-compat.js?v=20260812-5','map-v7-compat');
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    await loadScript('map-v7.js?v=20260812-5','map-v7');
-    await loadScript('tomorrow-map.js?v=20260812-1','tomorrow-map');
-    await loadScript('map-v7-runtime.js?v=20260812-5','map-v7-runtime');
-    await loadScript('map-v7-watchdog.js?v=20260812-4','map-v7-watchdog');
-    await loadScript('premium-bridge.js?v=20260812-8','premium-bridge-v7');
-    document.documentElement.dataset.mapEngine='v7';
+    await loadScript('map-v8.js?v=20260812-1','map-v8');
+    await loadScript('premium-home.js?v=20260812-1','premium-home-v8');
+    await waitForV8Ready();
+    document.documentElement.dataset.mapEngine='v8';
     flushPending();
   }
 
-  window.addEventListener('stormlens:v7-fatal', event => {
+  window.addEventListener('stormlens:v8-fatal', event => {
+    if (fallbackStarted) return;
     const reason = event.detail?.reason || 'Map service unavailable';
-    console.warn('[StormLens] V7 watchdog requested fallback:', reason);
-    switchingLayer = false;
-    queuedLayer = null;
-    setSwitchingUI(false);
-    loadV6(reason).catch(error => console.error('[StormLens] V6 fallback failed', error));
+    console.warn('[StormLens] V8 requested fallback:', reason);
+    switchingLayer=false; queuedLayer=null; setSwitchingUI(false);
+    loadV6(reason).catch(error=>console.error('[StormLens] V6 fallback failed',error));
   });
 
   async function loadEngine() {
     ensureLegacyAlertHook();
     const hasMapTiler=Boolean(window.STORMLENS_PUBLIC_CONFIG?.mapTilerApiKey);
     if (!hasMapTiler) {
-      console.info('[StormLens] MAPTILER_API_KEY not configured in this deployment. Using V6 map engine.');
+      console.info('[StormLens] MAPTILER_API_KEY not configured. Using V6 map engine.');
       return loadV6('MapTiler not configured');
     }
     try {
-      await loadV7();
-      console.info('[StormLens] MapTiler V7 weather engine ready.');
+      await loadV8();
+      console.info('[StormLens] V8 map and timeline engine ready.');
     } catch (error) {
-      console.warn('[StormLens] MapTiler V7 failed to initialize. Falling back to V6.',error);
-      await loadV6('V7 startup failed');
+      console.warn('[StormLens] V8 failed to initialize. Falling back to V6.',error);
+      await loadV6(error?.message || 'V8 startup failed');
     }
   }
 
