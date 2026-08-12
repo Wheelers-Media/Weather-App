@@ -20,6 +20,7 @@ jobs:
           node --check premium-overlays.js
           node --check premium-bridge.js
           node --check sw.js
+          node --check scripts/check-geomet.mjs
       - name: Check Vercel API module syntax
         run: |
           for file in api/*.js; do
@@ -29,3 +30,5 @@ jobs:
         run: |
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
+      - name: Validate live ECCC GeoMet layers
+        run: node scripts/check-geomet.mjs
