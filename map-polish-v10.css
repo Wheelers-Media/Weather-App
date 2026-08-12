@@ -1,0 +1,36 @@
+/* StormLens V10.1 interaction polish */
+#radarTimeline {
+  touch-action: none;
+  cursor: ew-resize;
+  will-change: background;
+}
+#radarTimeline::-webkit-slider-thumb {
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+#radarTimeline:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 7px rgba(102,181,247,.12);
+}
+#radarTimeline::-moz-range-thumb {
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+#radarTimeline:active::-moz-range-thumb {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 7px rgba(102,181,247,.12);
+}
+
+.v10-range-bar button,
+.v10-speed-bar button {
+  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .12s ease;
+}
+.v10-range-bar button:active,
+.v10-speed-bar button:active { transform: scale(.96); }
+
+/* Keep the map canvas visually dominant like a dedicated weather app. */
+#weatherMap .maplibregl-canvas { image-rendering:auto; }
+.radar-controller { backdrop-filter: blur(22px) saturate(125%); }
+
+@media (pointer:coarse) {
+  #radarTimeline { min-height:28px; }
+  .v10-range-bar button { min-width:43px; }
+}
