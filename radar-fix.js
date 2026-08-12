@@ -5,6 +5,8 @@
   window.StormLensOriginalWms = L.tileLayer.wms;
   let fallbackStarted = false;
   let pendingLayer = null;
+  let queuedLayer = null;
+  let switchingLayer = false;
   let routerInstalled = false;
 
   L.map = function (...args) {
@@ -44,8 +46,16 @@
       : null;
     document.querySelectorAll('#quickLayers [data-layer]').forEach(button => {
       const key = button.dataset.layer;
-      button.classList.toggle('active', Boolean(quick && key === quick));
-      button.setAttribute('aria-pressed', String(Boolean(quick && key === quick)));
+      const selected = Boolean(quick && key === quick);
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+  }
+
+  function setSwitchingUI(on) {
+    document.documentElement.dataset.layerSwitching = on ? 'true' : 'false';
+    document.querySelectorAll('#quickLayers [data-layer]:not([data-layer="layers"])').forEach(button => {
+      button.setAttribute('aria-busy', String(on));
     });
   }
 
@@ -55,20 +65,39 @@
       pendingLayer = { rawId, closeSheet };
       return;
     }
+
     const id = normalizeLegacyLayer(rawId, engine);
     if (!engine.defs?.[id]) return;
+
+    if (switchingLayer) {
+      queuedLayer = { rawId, closeSheet };
+      return;
+    }
+
+    switchingLayer = true;
     pendingLayer = null;
-    Promise.resolve(engine.selectLayer(id)).catch(error => {
-      console.warn('[StormLens layer router]', error);
-    });
+    setSwitchingUI(true);
+
     if (closeSheet) {
       const modal = document.getElementById('layersModal');
       if (modal) modal.hidden = true;
     }
+
+    Promise.resolve(engine.selectLayer(id)).catch(error => {
+      console.warn('[StormLens layer router]', error);
+    }).finally(() => {
+      switchingLayer = false;
+      setSwitchingUI(false);
+      if (queuedLayer) {
+        const next = queuedLayer;
+        queuedLayer = null;
+        requestLayer(next.rawId, next.closeSheet);
+      }
+    });
   }
 
   function flushPending() {
-    if (!pendingLayer || !activeEngine()) return;
+    if (!pendingLayer || !activeEngine() || switchingLayer) return;
     const pending = pendingLayer;
     pendingLayer = null;
     requestLayer(pending.rawId, pending.closeSheet);
@@ -78,8 +107,8 @@
     if (routerInstalled) return;
     routerInstalled = true;
 
-    // radar-fix.js loads before app.js, so this capture listener owns all map-layer taps
-    // before the legacy app can run its older single-layer handlers.
+    // This file loads before app.js. Capture-phase routing means the old map handlers
+    // never get a second chance to change the layer, legend or timeline independently.
     document.addEventListener('click', event => {
       const quick = event.target.closest?.('#quickLayers [data-layer]');
       if (quick) {
@@ -197,12 +226,12 @@
     const legacy = document.getElementById('weatherMap');
     if (legacy) { legacy.style.opacity='1'; legacy.style.pointerEvents='auto'; }
     await Promise.all([
-      addStylesheet('map-v6.css?v=20260812-4','map-v6'),
+      addStylesheet('map-v6.css?v=20260812-5','map-v6'),
       addStylesheet('premium-data.css?v=20260812-1','premium-data')
     ]);
-    await loadScript('map-v6.js?v=20260812-4','map-v6');
-    await loadScript('map-v6-guard.js?v=20260812-4','map-v6-guard');
-    await loadScript('premium-bridge.js?v=20260812-6','premium-bridge-v6');
+    await loadScript('map-v6.js?v=20260812-5','map-v6');
+    await loadScript('map-v6-guard.js?v=20260812-5','map-v6-guard');
+    await loadScript('premium-bridge.js?v=20260812-7','premium-bridge-v6');
     document.documentElement.dataset.mapEngine='v6';
     flushPending();
     const status=document.getElementById('mapLayerStatus');
@@ -211,20 +240,20 @@
 
   async function loadV7() {
     await Promise.all([
-      addStylesheet('map-v6.css?v=20260812-4','map-v6-shared-ui'),
-      addStylesheet('map-v7.css?v=20260812-3','map-v7'),
+      addStylesheet('map-v6.css?v=20260812-5','map-v6-shared-ui'),
+      addStylesheet('map-v7.css?v=20260812-4','map-v7'),
       addStylesheet('premium-data.css?v=20260812-1','premium-data'),
       addStylesheet('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.css','maptiler-sdk')
     ]);
 
     await loadScript('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.umd.min.js','maptiler-sdk');
     await loadScript('https://cdn.maptiler.com/maptiler-weather/v3.1.1/maptiler-weather.umd.min.js','maptiler-weather');
-    await loadScript('map-v7-compat.js?v=20260812-3','map-v7-compat');
+    await loadScript('map-v7-compat.js?v=20260812-4','map-v7-compat');
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    await loadScript('map-v7.js?v=20260812-3','map-v7');
-    await loadScript('map-v7-runtime.js?v=20260812-3','map-v7-runtime');
-    await loadScript('map-v7-watchdog.js?v=20260812-2','map-v7-watchdog');
-    await loadScript('premium-bridge.js?v=20260812-6','premium-bridge-v7');
+    await loadScript('map-v7.js?v=20260812-4','map-v7');
+    await loadScript('map-v7-runtime.js?v=20260812-4','map-v7-runtime');
+    await loadScript('map-v7-watchdog.js?v=20260812-3','map-v7-watchdog');
+    await loadScript('premium-bridge.js?v=20260812-7','premium-bridge-v7');
     document.documentElement.dataset.mapEngine='v7';
     flushPending();
   }
@@ -232,6 +261,9 @@
   window.addEventListener('stormlens:v7-fatal', event => {
     const reason = event.detail?.reason || 'Map service unavailable';
     console.warn('[StormLens] V7 watchdog requested fallback:', reason);
+    switchingLayer = false;
+    queuedLayer = null;
+    setSwitchingUI(false);
     loadV6(reason).catch(error => console.error('[StormLens] V6 fallback failed', error));
   });
 
