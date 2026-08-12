@@ -46,6 +46,7 @@
       await Promise.all([
         addStyle('map-v6.css?v=20260812-11', 'shared-map-ui'),
         addStyle('map-core-v10.css?v=20260812-3', 'map-core-v10'),
+        addStyle('map-polish-v10.css?v=20260812-1', 'map-polish-v10'),
         addStyle('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.css', 'maptiler-sdk')
       ]);
       await addScript('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.umd.min.js', 'maptiler-sdk');
