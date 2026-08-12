@@ -33,6 +33,12 @@
     return `${host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
   }
 
+  function setRainViewerLegend() {
+    const legend = document.getElementById('radarLegend');
+    if (!legend) return;
+    legend.innerHTML = '<span><b class="legend-dot rv1"></b>Light</span><span><b class="legend-dot rv2"></b>Moderate</span><span><b class="legend-dot rv3"></b>Heavy</span><span><b class="legend-dot rv4"></b>Intense</span>';
+  }
+
   function createRainViewerLayer(options) {
     const opacity = Number.isFinite(Number(options.opacity)) ? Number(options.opacity) : 0.78;
     const layer = L.tileLayer('', {
@@ -69,7 +75,8 @@
         if (!frame) throw new Error('No radar frame');
         layer.setUrl(tileUrl(provider.host, frame), false);
         layer._stormlensFrameTime = frame.time;
-        source('Observed radar: RainViewer composite · Canadian forecast layers and alerts: ECCC');
+        setRainViewerLegend();
+        source('Weather data by RainViewer · Canadian forecast layers and official alerts by ECCC');
       } catch (error) {
         status('Radar provider unavailable');
         source('Observed radar could not connect. Canadian ECCC layers remain available.');
@@ -88,6 +95,7 @@
       } else {
         refresh(false);
       }
+      setTimeout(setRainViewerLegend, 0);
       return this;
     };
     layer.wmsParams = { layers: 'RADAR_1KM_RRAI', styles: '', format: 'image/png', transparent: true };
@@ -97,6 +105,7 @@
     layer.on('loading', () => status('Observed radar · loading'));
     layer.on('tileload', () => {
       tileLoads += 1;
+      setRainViewerLegend();
       if (tileLoads === 1) status('Observed radar · LIVE');
     });
     layer.on('tileerror', () => {
