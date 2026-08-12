@@ -1,5 +1,5 @@
-const CACHE='stormlens-v7-maptiler-tomorrow-20260812-1';
-const APP=['./','./index.html','./styles.css','./desktop.css','./map-v6.css','./map-v7.css','./premium-data.css','./app.js','./radar-fix.js','./map-v6.js','./map-v6-guard.js','./map-v7-compat.js','./map-v7.js','./tomorrow-map.js','./map-v7-runtime.js','./map-v7-watchdog.js','./maptiler-env.js','./premium-bridge.js','./premium-home.js','./premium-lightning.js','./manifest.json','./icon-192.png','./icon-512.png'];
+const CACHE='stormlens-v8-premium-map-20260812-1';
+const APP=['./','./index.html','./styles.css','./desktop.css','./map-v6.css','./map-v8.css','./premium-data.css','./app.js','./radar-fix.js','./map-v6.js','./map-v6-guard.js','./map-v8.js','./maptiler-env.js','./premium-bridge.js','./premium-home.js','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP)));
@@ -7,7 +7,7 @@ self.addEventListener('install',event=>{
 self.addEventListener('activate',event=>event.waitUntil(Promise.all([
   caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))),
   self.clients.claim()
-])));
+]));
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET') return;
   const url=new URL(event.request.url);
