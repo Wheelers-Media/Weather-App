@@ -1,0 +1,111 @@
+/* v3: reliable radar status + responsive desktop workspace */
+.desktop-brand { display:none; }
+.radar-source-line { margin-top:10px; color:#6f7d90; font-size:8px; line-height:1.35; }
+.rv1 { background:#49a7ff; }
+.rv2 { background:#1677ff; }
+.rv3 { background:#6a55ff; }
+.rv4 { background:#e04cff; }
+.map-status-pill[data-error="true"] .pulse-dot { background:#ff6e7b; box-shadow:0 0 0 5px rgba(255,110,123,.1); }
+
+@media (min-width: 1024px) {
+  :root { --desktop-rail: 92px; }
+  .app-shell { max-width:none; width:100vw; height:100dvh; margin:0; }
+  .weather-atmosphere { left:var(--desktop-rail); }
+  .topbar {
+    left:var(--desktop-rail);
+    height:78px;
+    grid-template-columns: minmax(220px,1fr) auto 46px;
+    padding:16px 30px;
+    border-bottom:1px solid rgba(255,255,255,.045);
+    background:rgba(7,11,18,.72);
+    backdrop-filter:blur(22px) saturate(130%);
+  }
+  .topbar > #locationMenuBtn { display:none; }
+  .desktop-brand { display:flex; align-items:center; gap:11px; min-width:0; }
+  .desktop-brand-mark { width:40px; height:40px; border-radius:14px; display:grid; place-items:center; color:#bee1ff; background:rgba(120,183,255,.11); border:1px solid rgba(120,183,255,.12); }
+  .desktop-brand-mark svg { width:19px; height:19px; }
+  .desktop-brand strong,.desktop-brand small { display:block; }
+  .desktop-brand strong { font-size:14px; letter-spacing:-.02em; }
+  .desktop-brand small { margin-top:2px; color:var(--muted-2); font-size:9px; }
+  .location-pill { grid-column:2; max-width:360px; }
+  #settingsBtn { grid-column:3; }
+
+  .screen-stack { left:var(--desktop-rail); }
+  .screen-content { padding-top:104px; padding-bottom:48px; }
+  .padded { padding-left:clamp(28px,4vw,64px); padding-right:clamp(28px,4vw,64px); max-width:1440px; margin:0 auto; }
+
+  .bottom-nav {
+    position:absolute;
+    z-index:80;
+    top:0; bottom:0; left:0; right:auto;
+    width:var(--desktop-rail); height:100dvh;
+    transform:none;
+    grid-template-columns:1fr;
+    grid-template-rows:repeat(4,76px);
+    align-content:center;
+    gap:8px;
+    padding:18px 12px;
+    border-radius:0;
+    border:0;
+    border-right:1px solid rgba(255,255,255,.065);
+    background:rgba(7,11,18,.92);
+    box-shadow:none;
+  }
+  .nav-item { min-height:70px; border-radius:20px; gap:7px; font-size:10px; }
+  .nav-item svg { width:21px; height:21px; }
+  .nav-item.active::before { top:50%; left:-12px; width:3px; height:28px; transform:translateY(-50%); }
+
+  #homeContent { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:16px; align-content:start; }
+  #homeContent > .hero { grid-column:span 7; min-height:310px; padding:32px 16px 16px 4px; }
+  #homeContent > .active-alerts { grid-column:1/-1; }
+  #homeContent > article.panel:nth-of-type(1) { grid-column:span 5; align-self:start; margin-top:22px; }
+  #homeContent > article.panel:nth-of-type(2) { grid-column:1/-1; margin-top:0; }
+  #homeContent > .metrics-grid { grid-column:1/-1; grid-template-columns:repeat(7,minmax(0,1fr)); margin-top:0; }
+  #homeContent > .section-title { grid-column:1/-1; margin-top:14px; margin-bottom:-4px; }
+  #homeContent > article.daily-list { grid-column:1/-1; margin-top:0; }
+  .metric-card { min-height:126px; }
+  .current-temp { font-size:clamp(96px,9vw,142px); }
+  .hero-icon { width:118px; height:118px; border-radius:34px; }
+  .hero-icon svg { width:76px; height:76px; }
+  .smart-summary { font-size:16px; max-width:720px; }
+  .hourly-strip { gap:10px; }
+  .hour-item { min-width:82px; }
+
+  .map-screen { left:0; }
+  #weatherMap { left:0; }
+  .map-top-overlay { top:96px; left:30px; right:30px; }
+  .map-layer-rail { top:148px; left:30px; right:430px; width:auto; transform:none; }
+  .radar-controller {
+    left:auto; right:30px; bottom:30px;
+    width:380px; transform:none;
+    padding:18px;
+    border-radius:26px;
+  }
+  .radar-source-line { font-size:9px; }
+
+  #forecastContent, #stormsContent { max-width:1320px; }
+  #forecastContent .chart-card { min-height:290px; }
+  .storm-grid { grid-template-columns:repeat(4,1fr); }
+  .storm-hero { padding:30px; }
+  .storm-hero h1 { font-size:38px; max-width:720px; }
+  .outlook-strip { max-width:720px; }
+
+  .modal-backdrop { padding-left:calc(var(--desktop-rail) + 20px); align-items:center; }
+  .sheet { width:min(620px,calc(100vw - var(--desktop-rail) - 48px)); max-height:82dvh; }
+}
+
+@media (min-width: 1400px) {
+  :root { --desktop-rail: 104px; }
+  .topbar { padding-left:44px; padding-right:44px; }
+  .padded { max-width:1520px; }
+  #homeContent > .hero { grid-column:span 6; }
+  #homeContent > article.panel:nth-of-type(1) { grid-column:span 6; }
+  .map-top-overlay { left:44px; right:44px; }
+  .map-layer-rail { left:44px; right:470px; }
+  .radar-controller { right:44px; width:410px; }
+}
+
+@media (max-width: 759px) {
+  .app-shell { width:100%; max-width:none; }
+  .desktop-brand { display:none; }
+}
