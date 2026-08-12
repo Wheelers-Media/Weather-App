@@ -47,11 +47,13 @@ jobs:
           grep -q "ci_test_maptiler_key" dist/maptiler-env.js
           grep -q "maximum-scale=1" dist/index.html
           grep -q "user-scalable=no" dist/index.html
-          grep -q "stormlens:map-screen-visible" dist/app.js
+          grep -q "document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'))" dist/app.js
+          grep -q "document.addEventListener('stormlens:map-screen-visible'" dist/map-core-v10.js
           grep -q "StormLensMapV10" dist/map-core-v10.js
           grep -q "stormlens-user-location-dot" dist/map-core-v10.js
           grep -q "Radar forecast" dist/map-core-v10.js
           grep -q "Thunderstorms · 14d" dist/map-core-v10.js
+          if grep -q "window.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'))" dist/app.js; then echo "V10 map-visible event emitted on wrong target"; exit 1; fi
           if grep -q "unpkg.com/leaflet" dist/index.html; then echo "Leaflet still present in production index"; exit 1; fi
           if grep -q "initMap();" dist/app.js; then echo "Legacy map startup still present in production app"; exit 1; fi
       - name: Validate live ECCC GeoMet layers
