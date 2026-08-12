@@ -21,6 +21,7 @@ jobs:
           node --check map-v6-guard.js
           node --check map-v7-compat.js
           node --check map-v7.js
+          node --check tomorrow-map.js
           node --check map-v7-runtime.js
           node --check map-v7-watchdog.js
           node --check premium-bridge.js
@@ -48,6 +49,7 @@ jobs:
           test -f dist/index.html
           test -f dist/map-v7-compat.js
           test -f dist/map-v7.js
+          test -f dist/tomorrow-map.js
           test -f dist/map-v7.css
           test -f dist/map-v7-runtime.js
           test -f dist/map-v7-watchdog.js
