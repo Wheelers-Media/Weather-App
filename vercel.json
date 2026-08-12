@@ -18,7 +18,7 @@
       "headers": [{"key": "Cache-Control", "value": "no-cache, no-store, must-revalidate"}]
     },
     {
-      "source": "/(app.js|radar-fix.js|premium-overlays.js|styles.css|desktop.css|premium-overlays.css)",
+      "source": "/(app.js|radar-fix.js|premium-overlays.js|premium-bridge.js|styles.css|desktop.css|premium-overlays.css)",
       "headers": [{"key": "Cache-Control", "value": "no-cache, must-revalidate"}]
     }
   ]
