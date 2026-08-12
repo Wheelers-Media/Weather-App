@@ -18,7 +18,7 @@
       "headers": [{"key": "Cache-Control", "value": "no-cache, no-store, must-revalidate"}]
     },
     {
-      "source": "/(app.js|radar-fix.js|premium-overlays.js|premium-bridge.js|premium-home.js|premium-lightning.js|styles.css|desktop.css|premium-overlays.css|premium-data.css)",
+      "source": "/(app.js|radar-fix.js|map-runtime-fix.js|premium-overlays.js|premium-bridge.js|premium-home.js|premium-lightning.js|styles.css|desktop.css|map-runtime-fix.css|premium-overlays.css|premium-data.css)",
       "headers": [{"key": "Cache-Control", "value": "no-cache, must-revalidate"}]
     }
   ]
