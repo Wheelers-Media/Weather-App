@@ -1,5 +1,5 @@
-const CACHE='stormlens-v5-premium-overlays-20260812';
-const APP=['./','./index.html','./styles.css','./desktop.css','./premium-overlays.css','./app.js','./radar-fix.js','./premium-overlays.js','./manifest.json','./icon-192.png','./icon-512.png'];
+const CACHE='stormlens-v5-premium-overlays-20260812-2';
+const APP=['./','./index.html','./styles.css','./desktop.css','./premium-overlays.css','./app.js','./radar-fix.js','./premium-overlays.js','./premium-bridge.js','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP)));
