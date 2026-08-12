@@ -156,22 +156,26 @@
     }
   }
 
+  function loadScript(src, marker) {
+    if (document.querySelector(`script[data-${marker}]`)) return;
+    const script = document.createElement('script');
+    script.src = src;
+    script.dataset[marker] = 'true';
+    script.async = true;
+    document.body.appendChild(script);
+  }
+
   function loadPremiumEngine() {
     ensureLegacyMapHooks();
     if (!document.querySelector('link[data-stormlens-premium]')) {
       const css = document.createElement('link');
       css.rel = 'stylesheet';
-      css.href = 'premium-overlays.css?v=20260812-2';
+      css.href = 'premium-overlays.css?v=20260812-3';
       css.dataset.stormlensPremium = 'true';
       document.head.appendChild(css);
     }
-    if (!document.querySelector('script[data-stormlens-premium]')) {
-      const script = document.createElement('script');
-      script.src = 'premium-overlays.js?v=20260812-2';
-      script.dataset.stormlensPremium = 'true';
-      script.async = true;
-      document.body.appendChild(script);
-    }
+    loadScript('premium-overlays.js?v=20260812-3', 'stormlensPremium');
+    loadScript('premium-bridge.js?v=20260812-3', 'stormlensBridge');
   }
 
   if (document.readyState === 'loading') {
