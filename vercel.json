@@ -21,7 +21,7 @@
       "headers": [{"key": "Cache-Control", "value": "no-cache, no-store, must-revalidate"}]
     },
     {
-      "source": "/(app.js|radar-fix.js|map-core-v10.js|map-v10-bridge.js|map-core-v10.css|premium-home.js|styles.css|desktop.css|map-v6.css|maptiler-env.js)",
+      "source": "/(app.js|radar-fix.js|map-quality-v10.js|map-core-v10.js|map-v10-bridge.js|map-quality-v10.css|map-core-v10.css|premium-home.js|styles.css|desktop.css|map-v6.css|maptiler-env.js)",
       "headers": [{"key": "Cache-Control", "value": "no-cache, must-revalidate"}]
     }
   ]
