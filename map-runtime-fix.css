@@ -1,0 +1,90 @@
+/* StormLens V6 mobile map cleanup */
+@media (max-width: 759px) {
+  .premium-active-bar { display:none !important; }
+
+  .map-top-overlay {
+    left:12px;
+    right:12px;
+  }
+  .map-status-pill {
+    max-width:calc(100vw - 82px);
+    min-width:0;
+    box-shadow:0 10px 26px rgba(0,0,0,.28);
+  }
+  #mapLayerStatus {
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .map-layer-rail {
+    left:0 !important;
+    right:0 !important;
+    width:auto !important;
+    transform:none !important;
+    padding:0 12px 5px;
+    gap:6px;
+    scroll-padding-left:12px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .layer-chip {
+    height:36px;
+    padding:0 11px;
+    border-radius:13px;
+    font-size:9px;
+  }
+
+  .radar-controller {
+    left:10px !important;
+    right:10px !important;
+    width:auto !important;
+    transform:none !important;
+    bottom:calc(78px + var(--safe-bottom)) !important;
+    padding:10px 12px 9px;
+    border-radius:20px;
+    background:rgba(7,12,19,.90);
+    box-shadow:0 14px 36px rgba(0,0,0,.34);
+  }
+  .radar-controller-head strong {
+    margin-top:2px;
+    font-size:12px;
+  }
+  .radar-controller .eyebrow {
+    font-size:8px;
+    letter-spacing:.14em;
+  }
+  .controller-actions { gap:5px; }
+  .mini-icon {
+    width:31px;
+    height:31px;
+    border-radius:11px;
+  }
+  .play-button {
+    width:38px;
+    height:38px;
+    border-radius:13px;
+  }
+  #radarTimeline { margin:7px 0 1px; }
+  .timeline-labels { font-size:7px; }
+  .legend-row {
+    margin-top:5px;
+    gap:8px;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    white-space:nowrap;
+    scrollbar-width:none;
+    min-height:13px;
+  }
+  .legend-row::-webkit-scrollbar { display:none; }
+  .legend-row span { flex:0 0 auto; }
+  .premium-wms-legend { max-height:22px; }
+  .radar-source-line { display:none !important; }
+
+  .leaflet-control-attribution {
+    margin-bottom:calc(72px + var(--safe-bottom)) !important;
+    max-width:72vw;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+}
