@@ -1,4 +1,7 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "cleanUrls": true,
   "headers": [
     {
@@ -18,7 +21,7 @@
       "headers": [{"key": "Cache-Control", "value": "no-cache, no-store, must-revalidate"}]
     },
     {
-      "source": "/(app.js|radar-fix.js|map-v6.js|map-v6-guard.js|premium-bridge.js|premium-home.js|premium-lightning.js|styles.css|desktop.css|map-v6.css|premium-data.css)",
+      "source": "/(app.js|radar-fix.js|map-v6.js|map-v6-guard.js|map-v7.js|map-v7.css|premium-bridge.js|premium-home.js|premium-lightning.js|styles.css|desktop.css|map-v6.css|premium-data.css|maptiler-env.js)",
       "headers": [{"key": "Cache-Control", "value": "no-cache, must-revalidate"}]
     }
   ]
