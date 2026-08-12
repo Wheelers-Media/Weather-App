@@ -18,6 +18,7 @@ jobs:
           node --check app.js
           node --check radar-fix.js
           node --check map-v6.js
+          node --check map-v6-guard.js
           node --check premium-bridge.js
           node --check premium-home.js
           node --check premium-lightning.js
