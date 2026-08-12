@@ -1,5 +1,5 @@
-const CACHE='stormlens-v6-map-runtime-20260812';
-const APP=['./','./index.html','./styles.css','./desktop.css','./premium-overlays.css','./premium-data.css','./map-runtime-fix.css','./app.js','./radar-fix.js','./map-runtime-fix.js','./premium-overlays.js','./premium-bridge.js','./premium-home.js','./premium-lightning.js','./manifest.json','./icon-192.png','./icon-512.png'];
+const CACHE='stormlens-v6-single-layer-20260812-1';
+const APP=['./','./index.html','./styles.css','./desktop.css','./map-v6.css','./premium-data.css','./app.js','./radar-fix.js','./map-v6.js','./premium-bridge.js','./premium-home.js','./premium-lightning.js','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP)));
