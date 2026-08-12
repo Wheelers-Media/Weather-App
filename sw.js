@@ -10,7 +10,7 @@ self.addEventListener('activate',event=>event.waitUntil(Promise.all([
 ])));
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET') return;
-  const url=new URL(e.request?.url || event.request.url);
+  const url=new URL(event.request.url);
   if(url.origin!==location.origin) return;
   if(event.request.mode==='navigate'){
     event.respondWith(fetch(event.request).catch(()=>caches.match('./index.html')));
