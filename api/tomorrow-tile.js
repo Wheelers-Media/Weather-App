@@ -73,7 +73,7 @@ export default async function handler(req, res) {
 
     const bytes = Buffer.from(await response.arrayBuffer());
     res.setHeader('Content-Type', response.headers.get('content-type') || 'image/png');
-    res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1800');
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=1800');
     return res.status(200).send(bytes);
   } catch (_) {
     return res.status(502).json({ error: 'Tomorrow.io provider request failed.' });
