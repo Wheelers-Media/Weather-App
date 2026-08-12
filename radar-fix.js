@@ -7,8 +7,6 @@
   let cache = null;
   let cacheAt = 0;
 
-  // Capture the Leaflet map without changing the main application API. This lets
-  // the premium overlay engine add multiple independent layers on top of the map.
   L.map = function (...args) {
     const map = originalMapFactory.apply(this, args);
     window.StormLensMap = map;
@@ -140,25 +138,36 @@
     return layer;
   }
 
-  // The legacy application still asks for RADAR_1KM_RRAI. Keep RainViewer as a
-  // graceful fallback while the premium engine tries official ECCC classic radar.
   L.tileLayer.wms = function(url, options = {}) {
     if (options.layers === 'RADAR_1KM_RRAI') return createRainViewerLayer(options);
     return originalWms.call(this, url, options);
   };
   window.StormLensOriginalWms = originalWms;
 
+  function ensureLegacyMapHooks() {
+    if (!document.getElementById('premiumCompatAlertHook')) {
+      const hook = document.createElement('button');
+      hook.id = 'premiumCompatAlertHook';
+      hook.type = 'button';
+      hook.hidden = true;
+      hook.dataset.toggleAlerts = 'true';
+      hook.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(hook);
+    }
+  }
+
   function loadPremiumEngine() {
+    ensureLegacyMapHooks();
     if (!document.querySelector('link[data-stormlens-premium]')) {
       const css = document.createElement('link');
       css.rel = 'stylesheet';
-      css.href = 'premium-overlays.css?v=20260812-1';
+      css.href = 'premium-overlays.css?v=20260812-2';
       css.dataset.stormlensPremium = 'true';
       document.head.appendChild(css);
     }
     if (!document.querySelector('script[data-stormlens-premium]')) {
       const script = document.createElement('script');
-      script.src = 'premium-overlays.js?v=20260812-1';
+      script.src = 'premium-overlays.js?v=20260812-2';
       script.dataset.stormlensPremium = 'true';
       script.async = true;
       document.body.appendChild(script);
