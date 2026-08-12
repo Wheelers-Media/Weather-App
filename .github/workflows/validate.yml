@@ -17,8 +17,7 @@ jobs:
         run: |
           node --check app.js
           node --check radar-fix.js
-          node --check map-runtime-fix.js
-          node --check premium-overlays.js
+          node --check map-v6.js
           node --check premium-bridge.js
           node --check premium-home.js
           node --check premium-lightning.js
