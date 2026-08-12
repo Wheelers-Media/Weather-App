@@ -1,10 +1,22 @@
 (() => {
   if (!window.L || !L.tileLayer || !L.tileLayer.wms) return;
 
+  const originalMapFactory = L.map;
   const originalWms = L.tileLayer.wms;
   const META_URL = 'https://api.rainviewer.com/public/weather-maps.json';
   let cache = null;
   let cacheAt = 0;
+
+  // Capture the Leaflet map without changing the main application API. This lets
+  // the premium overlay engine add multiple independent layers on top of the map.
+  L.map = function (...args) {
+    const map = originalMapFactory.apply(this, args);
+    window.StormLensMap = map;
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('stormlens:map-ready', { detail: { map } }));
+    }, 0);
+    return map;
+  };
 
   async function getFrames(force = false) {
     if (!force && cache && Date.now() - cacheAt < 4 * 60 * 1000) return cache;
@@ -34,6 +46,7 @@
   }
 
   function setRainViewerLegend() {
+    if (window.StormLensPremiumOverlays?.ownsLegend) return;
     const legend = document.getElementById('radarLegend');
     if (!legend) return;
     legend.innerHTML = '<span><b class="legend-dot rv1"></b>Light</span><span><b class="legend-dot rv2"></b>Moderate</span><span><b class="legend-dot rv3"></b>Heavy</span><span><b class="legend-dot rv4"></b>Intense</span>';
@@ -51,16 +64,21 @@
       className: 'stormlens-radar-tiles'
     });
 
+    layer._stormlensProvider = 'rainviewer-fallback';
+    layer._stormlensDefaultOpacity = opacity;
+
     let desiredTime = null;
     let provider = null;
     let loadGeneration = 0;
 
     const status = text => {
+      if (window.StormLensPremiumOverlays?.ownsStatus) return;
       const el = document.getElementById('mapLayerStatus');
       if (el) el.textContent = text;
     };
 
     const source = text => {
+      if (window.StormLensPremiumOverlays?.ownsStatus) return;
       const el = document.getElementById('radarSourceLine');
       if (el) el.textContent = text;
     };
@@ -76,11 +94,11 @@
         layer.setUrl(tileUrl(provider.host, frame), false);
         layer._stormlensFrameTime = frame.time;
         setRainViewerLegend();
-        source('Weather data by RainViewer · Canadian forecast layers and official alerts by ECCC');
+        source('Fallback radar by RainViewer · Canadian layers and alerts by ECCC');
       } catch (error) {
         status('Radar provider unavailable');
         source('Observed radar could not connect. Canadian ECCC layers remain available.');
-        console.error('[StormLens radar]', error);
+        console.error('[StormLens radar fallback]', error);
       }
     }
 
@@ -111,10 +129,10 @@
     layer.on('tileerror', () => {
       tileErrors += 1;
       if (tileLoads === 0 && tileErrors === 4) {
-        status('Radar · refreshing feed');
+        status('Radar · refreshing fallback');
         refresh(true);
       } else if (tileLoads === 0 && tileErrors >= 10) {
-        status('Radar tiles unavailable');
+        status('Radar fallback unavailable');
       }
     });
 
@@ -122,8 +140,34 @@
     return layer;
   }
 
+  // The legacy application still asks for RADAR_1KM_RRAI. Keep RainViewer as a
+  // graceful fallback while the premium engine tries official ECCC classic radar.
   L.tileLayer.wms = function(url, options = {}) {
     if (options.layers === 'RADAR_1KM_RRAI') return createRainViewerLayer(options);
     return originalWms.call(this, url, options);
   };
+  window.StormLensOriginalWms = originalWms;
+
+  function loadPremiumEngine() {
+    if (!document.querySelector('link[data-stormlens-premium]')) {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = 'premium-overlays.css?v=20260812-1';
+      css.dataset.stormlensPremium = 'true';
+      document.head.appendChild(css);
+    }
+    if (!document.querySelector('script[data-stormlens-premium]')) {
+      const script = document.createElement('script');
+      script.src = 'premium-overlays.js?v=20260812-1';
+      script.dataset.stormlensPremium = 'true';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadPremiumEngine, { once: true });
+  } else {
+    loadPremiumEngine();
+  }
 })();
