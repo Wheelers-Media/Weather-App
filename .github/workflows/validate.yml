@@ -1,0 +1,31 @@
+name: Validate StormLens
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check browser JavaScript syntax
+        run: |
+          node --check app.js
+          node --check radar-fix.js
+          node --check premium-overlays.js
+          node --check premium-bridge.js
+          node --check sw.js
+      - name: Check Vercel API module syntax
+        run: |
+          for file in api/*.js; do
+            node --input-type=module --check < "$file"
+          done
+      - name: Validate JSON files
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
