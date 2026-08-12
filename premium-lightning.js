@@ -5,7 +5,8 @@
   let rings = null;
   let timer = null;
   let metric = null;
-  let enabled = false;
+  let providerEnabled = false;
+  let selectedLayer = null;
 
   async function providerStatus() {
     if (status) return status;
@@ -51,8 +52,14 @@
     document.getElementById('mapScreen').appendChild(metric);
   }
 
+  function clearLightning() {
+    if (group) { group.remove(); group = null; }
+    if (rings) { rings.remove(); rings = null; }
+    if (metric) metric.hidden = true;
+  }
+
   function drawRings(loc) {
-    if (!map || !loc) return;
+    if (!map || !loc || selectedLayer !== 'lightning') return;
     if (rings) rings.remove();
     rings = L.layerGroup().addTo(map);
     [10,25,50,100].forEach(radius => {
@@ -67,7 +74,7 @@
   }
 
   function draw(strikes, loc) {
-    if (!map) return;
+    if (!map || selectedLayer !== 'lightning') return;
     if (group) group.remove();
     group = L.layerGroup().addTo(map);
     const now = Date.now()/1000;
@@ -104,7 +111,7 @@
 
   async function refresh() {
     const loc = location();
-    if (!enabled || !map || !loc) return;
+    if (!providerEnabled || selectedLayer !== 'lightning' || !map || !loc) return clearLightning();
     try {
       const response = await fetch(`/api/xweather-lightning?lat=${encodeURIComponent(loc.latitude)}&lon=${encodeURIComponent(loc.longitude)}&radius=100&limit=1000`, { cache:'no-store' });
       if (!response.ok) return;
@@ -119,13 +126,18 @@
   async function activate(targetMap) {
     map = targetMap;
     const providers = await providerStatus();
-    enabled = Boolean(providers.xweather);
-    if (!enabled) return;
-    await refresh();
+    providerEnabled = Boolean(providers.xweather);
+    selectedLayer = window.StormLensMapV6?.selectedLayer || null;
     clearInterval(timer);
     timer = setInterval(refresh, 60000);
+    refresh();
   }
 
+  window.addEventListener('stormlens:weather-layer-changed', event => {
+    selectedLayer = event.detail?.id || null;
+    if (selectedLayer !== 'lightning') clearLightning();
+    else refresh();
+  });
   window.addEventListener('stormlens:map-ready', event => activate(event.detail.map));
   if (window.StormLensMap) activate(window.StormLensMap);
 })();
