@@ -1,192 +1,45 @@
 (() => {
-  if (!window.L || !L.tileLayer || !L.tileLayer.wms) return;
+  if (!window.L || !L.map || !L.tileLayer?.wms) return;
 
   const originalMapFactory = L.map;
-  const originalWms = L.tileLayer.wms;
-  const META_URL = 'https://api.rainviewer.com/public/weather-maps.json';
-  let cache = null;
-  let cacheAt = 0;
+  window.StormLensOriginalWms = L.tileLayer.wms;
 
   L.map = function (...args) {
     const map = originalMapFactory.apply(this, args);
     window.StormLensMap = map;
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('stormlens:map-ready', { detail: { map } }));
-    }, 0);
+    setTimeout(() => window.dispatchEvent(new CustomEvent('stormlens:map-ready', { detail:{ map } })), 0);
     return map;
   };
 
-  async function getFrames(force = false) {
-    if (!force && cache && Date.now() - cacheAt < 4 * 60 * 1000) return cache;
-    const response = await fetch(`${META_URL}?_=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`RainViewer metadata ${response.status}`);
-    const data = await response.json();
-    const frames = data?.radar?.past || [];
-    if (!data?.host || !frames.length) throw new Error('No radar frames returned');
-    cache = { host: data.host, frames };
-    cacheAt = Date.now();
-    return cache;
-  }
-
-  function nearestFrame(frames, desiredTime) {
-    if (!frames.length) return null;
-    if (!desiredTime) return frames[frames.length - 1];
-    const wanted = new Date(desiredTime).getTime() / 1000;
-    if (!Number.isFinite(wanted)) return frames[frames.length - 1];
-    return frames.reduce((best, frame) =>
-      Math.abs(frame.time - wanted) < Math.abs(best.time - wanted) ? frame : best,
-      frames[0]
-    );
-  }
-
-  function tileUrl(host, frame) {
-    return `${host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
-  }
-
-  function setRainViewerLegend() {
-    if (window.StormLensPremiumOverlays?.ownsLegend) return;
-    const legend = document.getElementById('radarLegend');
-    if (!legend) return;
-    legend.innerHTML = '<span><b class="legend-dot rv1"></b>Light</span><span><b class="legend-dot rv2"></b>Moderate</span><span><b class="legend-dot rv3"></b>Heavy</span><span><b class="legend-dot rv4"></b>Intense</span>';
-  }
-
-  function createRainViewerLayer(options) {
-    const opacity = Number.isFinite(Number(options.opacity)) ? Number(options.opacity) : 0.78;
-    const layer = L.tileLayer('', {
-      opacity,
-      maxNativeZoom: 7,
-      maxZoom: 19,
-      keepBuffer: 3,
-      updateWhenIdle: false,
-      crossOrigin: true,
-      className: 'stormlens-radar-tiles'
-    });
-
-    layer._stormlensProvider = 'rainviewer-fallback';
-    layer._stormlensDefaultOpacity = opacity;
-
-    let desiredTime = null;
-    let provider = null;
-    let loadGeneration = 0;
-
-    const status = text => {
-      if (window.StormLensPremiumOverlays?.ownsStatus) return;
-      const el = document.getElementById('mapLayerStatus');
-      if (el) el.textContent = text;
-    };
-
-    const source = text => {
-      if (window.StormLensPremiumOverlays?.ownsStatus) return;
-      const el = document.getElementById('radarSourceLine');
-      if (el) el.textContent = text;
-    };
-
-    async function refresh(force = false) {
-      const generation = ++loadGeneration;
-      try {
-        status('Observed radar · connecting');
-        provider = await getFrames(force);
-        if (generation !== loadGeneration) return;
-        const frame = nearestFrame(provider.frames, desiredTime);
-        if (!frame) throw new Error('No radar frame');
-        layer.setUrl(tileUrl(provider.host, frame), false);
-        layer._stormlensFrameTime = frame.time;
-        setRainViewerLegend();
-        source('Fallback radar by RainViewer · Canadian layers and alerts by ECCC');
-      } catch (error) {
-        status('Radar provider unavailable');
-        source('Observed radar could not connect. Canadian ECCC layers remain available.');
-        console.error('[StormLens radar fallback]', error);
-      }
-    }
-
-    layer.setParams = function(params = {}, noRedraw = false) {
-      if (params.time) desiredTime = params.time;
-      if (provider?.frames?.length) {
-        const frame = nearestFrame(provider.frames, desiredTime);
-        if (frame) {
-          this._stormlensFrameTime = frame.time;
-          this.setUrl(tileUrl(provider.host, frame), noRedraw);
-        }
-      } else {
-        refresh(false);
-      }
-      setTimeout(setRainViewerLegend, 0);
-      return this;
-    };
-    layer.wmsParams = { layers: 'RADAR_1KM_RRAI', styles: '', format: 'image/png', transparent: true };
-
-    let tileLoads = 0;
-    let tileErrors = 0;
-    layer.on('loading', () => status('Observed radar · loading'));
-    layer.on('tileload', () => {
-      tileLoads += 1;
-      setRainViewerLegend();
-      if (tileLoads === 1) status('Observed radar · LIVE');
-    });
-    layer.on('tileerror', () => {
-      tileErrors += 1;
-      if (tileLoads === 0 && tileErrors === 4) {
-        status('Radar · refreshing fallback');
-        refresh(true);
-      } else if (tileLoads === 0 && tileErrors >= 10) {
-        status('Radar fallback unavailable');
-      }
-    });
-
-    refresh(false);
-    return layer;
-  }
-
-  L.tileLayer.wms = function(url, options = {}) {
-    if (options.layers === 'RADAR_1KM_RRAI') return createRainViewerLayer(options);
-    return originalWms.call(this, url, options);
-  };
-  window.StormLensOriginalWms = originalWms;
-
-  function ensureLegacyMapHooks() {
-    if (!document.getElementById('premiumCompatAlertHook')) {
-      const hook = document.createElement('button');
-      hook.id = 'premiumCompatAlertHook';
-      hook.type = 'button';
-      hook.hidden = true;
-      hook.dataset.toggleAlerts = 'true';
-      hook.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(hook);
-    }
-  }
-
-  function loadStylesheet(href, marker) {
+  function addStylesheet(href, marker) {
     if (document.querySelector(`link[data-${marker}]`)) return;
-    const css = document.createElement('link');
-    css.rel = 'stylesheet';
-    css.href = href;
-    css.dataset[marker] = 'true';
-    document.head.appendChild(css);
+    const link=document.createElement('link');
+    link.rel='stylesheet'; link.href=href; link.dataset[marker]='true';
+    document.head.appendChild(link);
   }
 
-  function loadScript(src, marker) {
+  function addScript(src, marker) {
     if (document.querySelector(`script[data-${marker}]`)) return;
-    const script = document.createElement('script');
-    script.src = src;
-    script.dataset[marker] = 'true';
-    script.async = false;
+    const script=document.createElement('script');
+    script.src=src; script.dataset[marker]='true'; script.async=false;
     document.body.appendChild(script);
   }
 
-  function loadPremiumEngine() {
-    ensureLegacyMapHooks();
-    loadStylesheet('map-runtime-fix.css?v=20260812-6', 'stormlensRuntimeFix');
-    loadStylesheet('premium-overlays.css?v=20260812-6', 'stormlensPremium');
-    // Keep order deterministic: runtime WMS patch -> overlay engine -> compatibility bridge.
-    loadScript('map-runtime-fix.js?v=20260812-6', 'stormlensRuntimeFix');
-    loadScript('premium-overlays.js?v=20260812-6', 'stormlensPremium');
-    loadScript('premium-bridge.js?v=20260812-6', 'stormlensBridge');
+  function ensureLegacyAlertHook() {
+    if (document.querySelector('[data-toggle-alerts]')) return;
+    const button=document.createElement('button');
+    button.type='button'; button.hidden=true; button.dataset.toggleAlerts='true';
+    document.body.appendChild(button);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadPremiumEngine, { once: true });
-  } else {
-    loadPremiumEngine();
+  function loadEngine() {
+    ensureLegacyAlertHook();
+    addStylesheet('map-v6.css?v=20260812-1','stormlensMapV6');
+    addStylesheet('premium-data.css?v=20260812-1','premiumData');
+    addScript('map-v6.js?v=20260812-1','stormlensMapV6');
+    addScript('premium-bridge.js?v=20260812-4','stormlensBridge');
   }
+
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',loadEngine,{once:true});
+  else loadEngine();
 })();
