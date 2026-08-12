@@ -1,0 +1,109 @@
+/* StormLens V7: MapTiler WebGL weather map */
+.stormlens-map-v7 {
+  position:absolute;
+  inset:0;
+  z-index:2;
+  overflow:hidden;
+  background:#101820;
+}
+.stormlens-map-v7 .maplibregl-map,
+.stormlens-map-v7 .maplibregl-canvas-container,
+.stormlens-map-v7 .maplibregl-canvas {
+  width:100%;
+  height:100%;
+}
+#weatherMap { z-index:0 !important; }
+.map-top-overlay,.map-layer-rail,.radar-controller { z-index:510; }
+.bottom-nav { z-index:700; }
+.topbar { z-index:720; }
+
+.stormlens-map-v7 .maplibregl-ctrl-bottom-left,
+.stormlens-map-v7 .maplibregl-ctrl-bottom-right {
+  z-index:12;
+}
+.stormlens-map-v7 .maplibregl-ctrl-attrib {
+  background:rgba(6,10,16,.58);
+  color:rgba(225,235,244,.66);
+  font-size:8px;
+  backdrop-filter:blur(10px);
+}
+.stormlens-map-v7 .maplibregl-ctrl-attrib a { color:inherit; }
+html[data-theme="light"] .stormlens-map-v7 .maplibregl-ctrl-attrib {
+  background:rgba(248,251,253,.72);
+  color:rgba(30,45,58,.65);
+}
+
+.v7-location-dot {
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:#5baef4;
+  border:3px solid white;
+  box-shadow:0 0 0 3px rgba(91,174,244,.24),0 3px 10px rgba(0,0,0,.28);
+}
+
+.v7-value-pill {
+  position:absolute;
+  z-index:540;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:calc(205px + var(--safe-bottom));
+  min-width:132px;
+  max-width:72vw;
+  padding:9px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(8,13,20,.88);
+  color:white;
+  backdrop-filter:blur(18px);
+  box-shadow:0 10px 30px rgba(0,0,0,.22);
+  pointer-events:none;
+  text-align:center;
+}
+.v7-value-pill span,.v7-value-pill strong { display:block; }
+.v7-value-pill span {
+  color:#8392a4;
+  font-size:8px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.v7-value-pill strong {
+  margin-top:2px;
+  font-size:13px;
+  letter-spacing:-.01em;
+}
+html[data-theme="light"] .v7-value-pill {
+  background:rgba(250,252,254,.92);
+  color:#15202b;
+  border-color:rgba(21,32,43,.10);
+}
+
+.v7-legend-text {
+  color:#8ea0b2;
+  white-space:nowrap;
+}
+html[data-theme="light"] .v7-legend-text { color:#647586; }
+
+/* V7 weather menu labels future coverage directly. */
+.v6-selected-summary span:last-child {
+  margin-left:auto;
+  white-space:nowrap;
+}
+
+/* MapTiler canvas must remain touchable while StormLens controls sit above it. */
+.stormlens-map-v7 .maplibregl-canvas { touch-action:none; }
+
+@media (max-width:759px) {
+  .v7-value-pill { bottom:calc(197px + var(--safe-bottom)); }
+  .stormlens-map-v7 .maplibregl-ctrl-bottom-right { bottom:72px; }
+  .stormlens-map-v7 .maplibregl-ctrl-bottom-left { bottom:72px; }
+  .stormlens-map-v7 .maplibregl-ctrl-attrib-button { width:22px;height:22px; }
+}
+
+@media (min-width:760px) {
+  .v7-value-pill { bottom:180px; }
+}
+
+@media (min-width:1024px) {
+  .v7-value-pill { bottom:190px; }
+}
