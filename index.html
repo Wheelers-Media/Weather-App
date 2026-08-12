@@ -22,38 +22,26 @@
     </div>
 
     <header class="topbar">
-      <button class="icon-button" id="locationMenuBtn" aria-label="Saved locations">
-        <i data-lucide="menu"></i>
-      </button>
+      <button class="icon-button" id="locationMenuBtn" aria-label="Saved locations"><i data-lucide="menu"></i></button>
       <button class="location-pill" id="locationSearchBtn" aria-label="Search location">
         <span class="location-pin"><i data-lucide="map-pin"></i></span>
-        <span>
-          <strong id="headerLocation">Calgary</strong>
-          <small id="headerRegion">Alberta, Canada</small>
-        </span>
+        <span><strong id="headerLocation">Calgary</strong><small id="headerRegion">Alberta, Canada</small></span>
         <i data-lucide="chevron-down" class="chevron"></i>
       </button>
-      <button class="icon-button" id="settingsBtn" aria-label="Settings">
-        <i data-lucide="settings-2"></i>
-      </button>
+      <button class="icon-button" id="settingsBtn" aria-label="Settings"><i data-lucide="settings-2"></i></button>
     </header>
 
     <main class="screen-stack">
       <section class="screen active" data-screen="home" id="homeScreen">
         <div id="homeContent" class="screen-content padded loading-state">
-          <div class="skeleton hero-skeleton"></div>
-          <div class="skeleton card-skeleton"></div>
-          <div class="skeleton card-skeleton"></div>
+          <div class="skeleton hero-skeleton"></div><div class="skeleton card-skeleton"></div><div class="skeleton card-skeleton"></div>
         </div>
       </section>
 
       <section class="screen map-screen" data-screen="map" id="mapScreen">
         <div id="weatherMap"></div>
         <div class="map-top-overlay">
-          <div class="map-status-pill">
-            <span class="pulse-dot"></span>
-            <span id="mapLayerStatus">ECCC radar</span>
-          </div>
+          <div class="map-status-pill"><span class="pulse-dot"></span><span id="mapLayerStatus">ECCC radar</span></div>
           <button class="map-fab" id="recenterBtn" aria-label="Recenter map"><i data-lucide="locate-fixed"></i></button>
         </div>
 
@@ -68,10 +56,7 @@
 
         <div class="radar-controller" id="radarController">
           <div class="radar-controller-head">
-            <div>
-              <span class="eyebrow" id="radarModeLabel">OBSERVED RADAR</span>
-              <strong id="radarTimestamp">Loading radar…</strong>
-            </div>
+            <div><span class="eyebrow" id="radarModeLabel">OBSERVED RADAR</span><strong id="radarTimestamp">Loading radar…</strong></div>
             <div class="controller-actions">
               <button class="mini-icon" id="radarStepBack" aria-label="Previous radar frame"><i data-lucide="skip-back"></i></button>
               <button class="play-button" id="radarPlay" aria-label="Play radar"><i data-lucide="play"></i></button>
@@ -81,21 +66,13 @@
           <input type="range" id="radarTimeline" min="0" max="1" value="0" step="1" />
           <div class="timeline-labels"><span>PAST</span><span id="timelineNowLabel">NOW</span></div>
           <div class="legend-row" id="radarLegend">
-            <span><b class="legend-dot l1"></b>Light</span>
-            <span><b class="legend-dot l2"></b>Moderate</span>
-            <span><b class="legend-dot l3"></b>Heavy</span>
-            <span><b class="legend-dot l4"></b>Intense</span>
+            <span><b class="legend-dot l1"></b>Light</span><span><b class="legend-dot l2"></b>Moderate</span><span><b class="legend-dot l3"></b>Heavy</span><span><b class="legend-dot l4"></b>Intense</span>
           </div>
         </div>
       </section>
 
-      <section class="screen" data-screen="forecast" id="forecastScreen">
-        <div id="forecastContent" class="screen-content padded"></div>
-      </section>
-
-      <section class="screen" data-screen="storms" id="stormsScreen">
-        <div id="stormsContent" class="screen-content padded"></div>
-      </section>
+      <section class="screen" data-screen="forecast" id="forecastScreen"><div id="forecastContent" class="screen-content padded"></div></section>
+      <section class="screen" data-screen="storms" id="stormsScreen"><div id="stormsContent" class="screen-content padded"></div></section>
     </main>
 
     <nav class="bottom-nav" aria-label="Primary navigation">
@@ -109,68 +86,34 @@
   <div class="modal-backdrop" id="searchModal" hidden>
     <div class="sheet search-sheet">
       <div class="sheet-handle"></div>
-      <div class="sheet-title-row">
-        <div>
-          <span class="eyebrow">LOCATION</span>
-          <h2>Search weather</h2>
-        </div>
-        <button class="icon-button close-modal" data-close="searchModal"><i data-lucide="x"></i></button>
-      </div>
-      <div class="search-box">
-        <i data-lucide="search"></i>
-        <input id="locationSearchInput" placeholder="City or town" autocomplete="off" />
-        <button class="locate-inline" id="useMyLocationBtn"><i data-lucide="locate-fixed"></i></button>
-      </div>
-      <div class="search-results" id="searchResults">
-        <button class="search-result current-default" data-default-location="true">
-          <span class="result-icon"><i data-lucide="map-pin"></i></span>
-          <span><strong>Calgary</strong><small>Alberta, Canada</small></span>
-        </button>
-      </div>
+      <div class="sheet-title-row"><div><span class="eyebrow">LOCATION</span><h2>Search weather</h2></div><button class="icon-button close-modal" data-close="searchModal"><i data-lucide="x"></i></button></div>
+      <div class="search-box"><i data-lucide="search"></i><input id="locationSearchInput" placeholder="City or town" autocomplete="off" /><button class="locate-inline" id="useMyLocationBtn"><i data-lucide="locate-fixed"></i></button></div>
+      <div class="search-results" id="searchResults"><button class="search-result current-default" data-default-location="true"><span class="result-icon"><i data-lucide="map-pin"></i></span><span><strong>Calgary</strong><small>Alberta, Canada</small></span></button></div>
     </div>
   </div>
 
   <div class="modal-backdrop" id="locationsModal" hidden>
-    <div class="sheet">
-      <div class="sheet-handle"></div>
-      <div class="sheet-title-row">
-        <div><span class="eyebrow">SAVED</span><h2>Locations</h2></div>
-        <button class="icon-button close-modal" data-close="locationsModal"><i data-lucide="x"></i></button>
-      </div>
-      <div class="saved-locations" id="savedLocationsList"></div>
-      <button class="primary-button" id="addLocationBtn"><i data-lucide="plus"></i> Add location</button>
-    </div>
+    <div class="sheet"><div class="sheet-handle"></div><div class="sheet-title-row"><div><span class="eyebrow">SAVED</span><h2>Locations</h2></div><button class="icon-button close-modal" data-close="locationsModal"><i data-lucide="x"></i></button></div><div class="saved-locations" id="savedLocationsList"></div><button class="primary-button" id="addLocationBtn"><i data-lucide="plus"></i> Add location</button></div>
   </div>
 
   <div class="modal-backdrop" id="settingsModal" hidden>
     <div class="sheet settings-sheet">
       <div class="sheet-handle"></div>
-      <div class="sheet-title-row">
-        <div><span class="eyebrow">PREFERENCES</span><h2>Settings</h2></div>
-        <button class="icon-button close-modal" data-close="settingsModal"><i data-lucide="x"></i></button>
-      </div>
+      <div class="sheet-title-row"><div><span class="eyebrow">PREFERENCES</span><h2>Settings</h2></div><button class="icon-button close-modal" data-close="settingsModal"><i data-lucide="x"></i></button></div>
       <div class="settings-list">
         <div class="setting-row"><span><strong>Temperature</strong><small>Display unit</small></span><select id="tempUnit"><option value="celsius">Celsius °C</option><option value="fahrenheit">Fahrenheit °F</option></select></div>
         <div class="setting-row"><span><strong>Wind</strong><small>Speed unit</small></span><select id="windUnit"><option value="kmh">km/h</option><option value="mph">mph</option><option value="kn">knots</option><option value="ms">m/s</option></select></div>
         <div class="setting-row"><span><strong>Radar opacity</strong><small>Weather overlay</small></span><input id="radarOpacity" type="range" min="20" max="100" value="78" /></div>
         <div class="setting-row"><span><strong>Radar speed</strong><small>Animation</small></span><select id="radarSpeed"><option value="1200">0.5×</option><option value="650" selected>1×</option><option value="350">2×</option><option value="180">4×</option></select></div>
       </div>
-      <div class="data-source-card">
-        <span class="eyebrow">DATA SOURCES</span>
-        <p><strong>Forecast:</strong> Open-Meteo multi-model</p>
-        <p><strong>Radar / nowcast / lightning / alerts:</strong> Environment and Climate Change Canada GeoMet</p>
-        <p class="fine-print">Observed radar and forecast products are labeled separately. No simulated storm data is used.</p>
-      </div>
+      <div class="data-source-card"><span class="eyebrow">DATA SOURCES</span><p><strong>Forecast:</strong> Open-Meteo multi-model</p><p><strong>Radar / nowcast / lightning / alerts:</strong> Environment and Climate Change Canada GeoMet</p><p class="fine-print">Observed radar and forecast products are labeled separately. No simulated storm data is used.</p></div>
     </div>
   </div>
 
   <div class="modal-backdrop" id="layersModal" hidden>
     <div class="sheet layer-sheet">
       <div class="sheet-handle"></div>
-      <div class="sheet-title-row">
-        <div><span class="eyebrow">MAP</span><h2>Weather layers</h2></div>
-        <button class="icon-button close-modal" data-close="layersModal"><i data-lucide="x"></i></button>
-      </div>
+      <div class="sheet-title-row"><div><span class="eyebrow">MAP</span><h2>Weather layers</h2></div><button class="icon-button close-modal" data-close="layersModal"><i data-lucide="x"></i></button></div>
       <div class="layer-group">
         <h3>Precipitation</h3>
         <button class="layer-list-item active" data-select-layer="radar"><span class="layer-list-icon"><i data-lucide="radar"></i></span><span><strong>Observed radar</strong><small>ECCC North American composite, 1 km</small></span><i data-lucide="check"></i></button>
@@ -189,6 +132,7 @@
   <div id="toast" class="toast" hidden></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="radar-fix.js?v=3"></script>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script src="app.js"></script>
 </body>
