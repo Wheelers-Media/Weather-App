@@ -1,0 +1,95 @@
+/* StormLens V10 map core */
+#weatherMap { position:absolute; inset:0; width:100%; height:100%; background:#0a1119; }
+#weatherMap .maplibregl-canvas { outline:none; }
+#weatherMap .maplibregl-ctrl-attrib { font-size:8px; background:rgba(7,11,18,.66); color:#8090a2; backdrop-filter:blur(8px); }
+#weatherMap .maplibregl-ctrl-attrib a { color:#a6bdd4; }
+
+.v10-map-error { position:absolute; inset:0; display:grid; place-content:center; gap:10px; text-align:center; padding:28px; background:linear-gradient(180deg,#0a1119,#070b12); color:#eef5fb; z-index:20; }
+.v10-map-error svg { width:34px; height:34px; margin:auto; color:#ff6878; }
+.v10-map-error strong { font-size:18px; }
+.v10-map-error p { max-width:420px; margin:0 auto; color:#8e9bad; font-size:12px; line-height:1.55; }
+.v10-map-error button { justify-self:center; margin-top:6px; border:1px solid rgba(255,255,255,.12); background:#172333; color:#fff; border-radius:14px; padding:10px 16px; }
+
+.map-status-pill[data-state="loading"] .pulse-dot { background:#e8bd58; box-shadow:0 0 0 5px rgba(232,189,88,.1); }
+.map-status-pill[data-state="error"] .pulse-dot { background:#ff6576; box-shadow:0 0 0 5px rgba(255,101,118,.1); }
+.map-status-pill[data-state="live"] .pulse-dot { background:#63d7a1; box-shadow:0 0 0 5px rgba(99,215,161,.1); }
+
+.v10-range-bar { display:flex; gap:5px; align-items:center; margin:9px 0 2px; overflow-x:auto; scrollbar-width:none; }
+.v10-range-bar::-webkit-scrollbar { display:none; }
+.v10-range-bar[hidden] { display:none; }
+.v10-range-bar button { min-width:42px; height:30px; padding:0 10px; border:1px solid rgba(255,255,255,.08); border-radius:10px; background:rgba(255,255,255,.035); color:#7f8da0; font-size:8px; font-weight:750; letter-spacing:.05em; cursor:pointer; }
+.v10-range-bar button.active { background:rgba(107,178,242,.16); border-color:rgba(107,178,242,.32); color:#cbe6ff; }
+
+.v10-speed-bar { display:flex; align-items:center; justify-content:flex-end; gap:5px; margin-top:7px; color:#6f7d8f; font-size:8px; }
+.v10-speed-bar span { margin-right:3px; }
+.v10-speed-bar button { min-width:34px; height:25px; padding:0 8px; border:1px solid rgba(255,255,255,.07); border-radius:9px; background:rgba(255,255,255,.025); color:#748397; font-size:8px; cursor:pointer; }
+.v10-speed-bar button.active { color:#beddff; background:rgba(110,180,245,.12); border-color:rgba(110,180,245,.24); }
+
+#radarTimeline { --v10-progress:0%; background:linear-gradient(to right,#73baff 0 var(--v10-progress),rgba(255,255,255,.14) var(--v10-progress) 100%); }
+#radarTimeline::-webkit-slider-runnable-track { background:transparent; }
+#radarTimeline::-moz-range-track { background:transparent; }
+
+.v10-value-pill { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:520; pointer-events:none; display:flex; flex-direction:column; gap:2px; min-width:92px; padding:8px 11px; border:1px solid rgba(255,255,255,.10); border-radius:13px; background:rgba(8,13,20,.88); box-shadow:0 14px 36px rgba(0,0,0,.28); backdrop-filter:blur(16px); }
+.v10-value-pill[hidden] { display:none; }
+.v10-value-pill small { color:#8594a6; font-size:7px; text-transform:uppercase; letter-spacing:.08em; }
+.v10-value-pill strong { color:#f3f7fb; font-size:13px; }
+
+.v10-current-layer { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; padding:10px 12px; margin:8px 0 6px; border-radius:14px; background:rgba(103,174,239,.06); }
+.v10-current-layer strong { font-size:10px; color:#d4e6f7; }
+.v10-current-layer small { font-size:8px; color:#738296; }
+.v10-layer-meta { align-self:center; margin-right:4px; color:#65788d; font-size:7px; font-weight:750; letter-spacing:.055em; white-space:nowrap; }
+.v6-layer-row { grid-template-columns:38px minmax(0,1fr) auto 24px !important; }
+
+.v10-l1 { background:#42cf5a; }
+.v10-l2 { background:#f1dd39; }
+.v10-l3 { background:#f29430; }
+.v10-l4 { background:#ec3d4d; }
+.v10-l5 { background:#c23ce0; }
+.v10-blue { background:#3b82f6; }
+.v10-yellow { background:#facc15; }
+.v10-red { background:#ef4444; }
+.v10-purple { background:#a855f7; }
+
+html[data-theme="light"] #weatherMap { background:#edf2f6; }
+html[data-theme="light"] #weatherMap .maplibregl-ctrl-attrib { background:rgba(248,251,253,.74); color:#697787; }
+html[data-theme="light"] .v10-range-bar button { background:rgba(25,55,80,.035); border-color:rgba(21,32,43,.09); color:#647587; }
+html[data-theme="light"] .v10-range-bar button.active { background:rgba(55,133,199,.12); border-color:rgba(55,133,199,.24); color:#245f8e; }
+html[data-theme="light"] .v10-speed-bar button { background:rgba(25,55,80,.025); border-color:rgba(21,32,43,.08); color:#68798a; }
+html[data-theme="light"] .v10-speed-bar button.active { color:#246b9f; background:rgba(55,133,199,.10); border-color:rgba(55,133,199,.20); }
+html[data-theme="light"] .v10-current-layer { background:rgba(46,117,177,.07); }
+html[data-theme="light"] .v10-current-layer strong { color:#244159; }
+html[data-theme="light"] .v10-value-pill { background:rgba(250,252,254,.92); border-color:rgba(21,32,43,.1); }
+html[data-theme="light"] .v10-value-pill strong { color:#162a3a; }
+
+@media (max-width:759px) {
+  .radar-controller { left:10px; right:10px; bottom:calc(82px + var(--safe-bottom)); padding:11px 12px 9px; border-radius:21px; max-height:220px; }
+  .radar-controller-head { min-height:40px; }
+  .radar-controller-head strong { font-size:12px; }
+  .v10-range-bar { margin-top:7px; }
+  .v10-range-bar button { min-width:39px; height:28px; }
+  .v10-speed-bar { margin-top:5px; }
+  .radar-source-line { display:none; }
+  .legend-row { margin-top:6px; white-space:nowrap; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
+  .map-layer-rail { left:8px; right:8px; gap:6px; }
+  .v10-layer-meta { display:none; }
+  .v6-layer-row { grid-template-columns:38px minmax(0,1fr) 24px !important; }
+}
+
+@media (min-width:760px) {
+  .v6-layer-groups { display:grid; grid-template-columns:1fr 1fr; gap:0 20px; }
+}
+
+@media (min-width:1024px) {
+  .radar-controller { width:min(430px,calc(100vw - 140px)); right:28px; left:auto; bottom:28px; }
+  .map-layer-rail { left:28px; right:auto; max-width:720px; }
+  .map-top-overlay { left:28px; right:28px; }
+  .v10-range-bar button { font-size:9px; }
+  .v10-speed-bar { font-size:9px; }
+}
+
+@media (min-width:1800px) {
+  .radar-controller { width:480px; right:36px; bottom:34px; padding:17px 18px 14px; }
+  .radar-controller-head strong { font-size:15px; }
+  .map-status-pill { height:44px; padding:0 15px; font-size:11px; }
+  .layer-chip { height:42px; padding:0 14px; font-size:10px; }
+}
