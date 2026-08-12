@@ -1,0 +1,44 @@
+.premium-minutecast-card { margin-top:14px; }
+.premium-minute-badge { padding:6px 8px; border-radius:9px; background:rgba(120,183,255,.09); color:#9dcfff; font-size:8px; letter-spacing:.08em; }
+.premium-minute-summary { margin:10px 0 13px; color:#8f9daf; font-size:10px; line-height:1.5; }
+.premium-minute-bars { height:66px; display:grid; grid-template-columns:repeat(24,1fr); gap:2px; align-items:end; padding-top:5px; }
+.premium-minute-bar { display:block; min-height:3px; border-radius:3px 3px 1px 1px; background:rgba(121,167,210,.18); }
+.premium-minute-bar.level-1 { background:#4ca8ff; }
+.premium-minute-bar.level-2 { background:#3d78ff; }
+.premium-minute-bar.level-3 { background:#7657ff; }
+.premium-minute-bar.level-4 { background:#d44cff; }
+.premium-minute-bar.level-5 { background:#ff4b79; }
+.premium-minute-labels { display:flex; justify-content:space-between; margin-top:6px; color:#59687b; font-size:7px; }
+.premium-minute-footer { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:10px; color:#66758a; font-size:8px; }
+.premium-minute-footer span:last-child { color:#536477; }
+
+.premium-lightning-metric {
+  position:absolute;
+  z-index:560;
+  right:14px;
+  top:calc(max(14px, env(safe-area-inset-top)) + 214px);
+  width:188px;
+  padding:10px 11px;
+  border-radius:15px;
+  border:1px solid rgba(255,218,93,.13);
+  background:rgba(9,14,22,.84);
+  backdrop-filter:blur(18px);
+  color:#dbe5f0;
+  pointer-events:none;
+}
+.premium-lightning-metric > span { display:flex; align-items:center; gap:6px; color:#d7bb64; font-size:7px; letter-spacing:.08em; }
+.premium-lightning-metric strong,.premium-lightning-metric small { display:block; }
+.premium-lightning-metric strong { margin-top:6px; font-size:11px; }
+.premium-lightning-metric small { margin-top:3px; color:#728197; font-size:7px; line-height:1.35; }
+.premium-lightning-pulse { width:7px; height:7px; border-radius:50%; background:#ffd85c; box-shadow:0 0 0 5px rgba(255,216,92,.09); animation:premiumLightningPulse 1.8s ease-out infinite; }
+@keyframes premiumLightningPulse { 0%,100% { box-shadow:0 0 0 3px rgba(255,216,92,.08); } 50% { box-shadow:0 0 0 8px rgba(255,216,92,0); } }
+.premium-ring-tooltip { background:rgba(10,16,24,.82)!important; border:1px solid rgba(255,255,255,.08)!important; color:#8fa0b3!important; box-shadow:none!important; font-size:8px!important; }
+.premium-ring-tooltip::before { display:none!important; }
+
+@media (min-width:1024px) {
+  .premium-minutecast-card { grid-column:1/-1; margin-top:0; }
+  .premium-lightning-metric { top:242px; right:30px; width:210px; }
+  .premium-minute-summary { font-size:11px; }
+  .premium-minute-footer { font-size:9px; }
+}
+@media (min-width:1400px) { .premium-lightning-metric { right:44px; } }
