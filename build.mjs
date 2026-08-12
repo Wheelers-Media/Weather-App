@@ -21,6 +21,10 @@ await fs.writeFile(path.join(out, 'maptiler-env.js'), publicConfig, 'utf8');
 
 const indexPath = path.join(out, 'index.html');
 let html = await fs.readFile(indexPath, 'utf8');
+html = html.replace(
+  'width=device-width, initial-scale=1, viewport-fit=cover',
+  'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'
+);
 if (!html.includes('maptiler-env.js')) {
   html = html.replace('<script src="radar-fix.js"></script>', '<script src="maptiler-env.js"></script>\n  <script src="radar-fix.js"></script>');
 }
