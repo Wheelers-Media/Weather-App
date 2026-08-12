@@ -19,6 +19,7 @@ jobs:
           node --check radar-fix.js
           node --check map-core-v10.js
           node --check map-v10-bridge.js
+          node --check storm-composite-v10.js
           node --check premium-home.js
           node --check sw.js
           node --check build.mjs
@@ -34,7 +35,7 @@ jobs:
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
-      - name: Test V10 production build
+      - name: Test V10.1 production build
         env:
           MAPTILER_API_KEY: ci_test_maptiler_key
         run: |
@@ -42,7 +43,9 @@ jobs:
           test -f dist/index.html
           test -f dist/map-core-v10.js
           test -f dist/map-core-v10.css
+          test -f dist/map-polish-v10.css
           test -f dist/map-v10-bridge.js
+          test -f dist/storm-composite-v10.js
           test -f dist/maptiler-env.js
           grep -q "ci_test_maptiler_key" dist/maptiler-env.js
           grep -q "maximum-scale=1" dist/index.html
@@ -52,10 +55,19 @@ jobs:
           grep -q "StormLensMapV10" dist/map-core-v10.js
           grep -q "stormlens-user-location-dot" dist/map-core-v10.js
           grep -q "Radar forecast" dist/map-core-v10.js
-          grep -q "Thunderstorms · 14d" dist/map-core-v10.js
+          grep -q "title:'Nowcast'.*provider:'maptiler'" dist/map-core-v10.js
+          grep -q "title:'Storm'.*provider:'maptiler'" dist/map-core-v10.js
+          grep -q "if(key==='lightning')return'lightning'" dist/map-core-v10.js
+          grep -q "if(key==='storms')return'storm'" dist/map-core-v10.js
+          grep -q "WIDTH:size,HEIGHT:size" dist/map-core-v10.js
+          grep -q "slider.addEventListener('change'" dist/map-core-v10.js
+          grep -q "bufferRaster(5)" dist/map-core-v10.js
+          grep -q "stormlens-storm-lightning-density" dist/storm-composite-v10.js
+          grep -q "navigator.vibrate" dist/storm-composite-v10.js
           if grep -q "window.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'))" dist/app.js; then echo "V10 map-visible event emitted on wrong target"; exit 1; fi
           if grep -q "unpkg.com/leaflet" dist/index.html; then echo "Leaflet still present in production index"; exit 1; fi
           if grep -q "initMap();" dist/app.js; then echo "Legacy map startup still present in production app"; exit 1; fi
+          if grep -q "tomorrowReady?'lightningForecast':'lightning'" dist/map-core-v10.js; then echo "Broken Tomorrow lightning quick target still present"; exit 1; fi
       - name: Validate live ECCC GeoMet layers
         continue-on-error: true
         run: node scripts/check-geomet.mjs
