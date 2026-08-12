@@ -156,26 +156,32 @@
     }
   }
 
+  function loadStylesheet(href, marker) {
+    if (document.querySelector(`link[data-${marker}]`)) return;
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = href;
+    css.dataset[marker] = 'true';
+    document.head.appendChild(css);
+  }
+
   function loadScript(src, marker) {
     if (document.querySelector(`script[data-${marker}]`)) return;
     const script = document.createElement('script');
     script.src = src;
     script.dataset[marker] = 'true';
-    script.async = true;
+    script.async = false;
     document.body.appendChild(script);
   }
 
   function loadPremiumEngine() {
     ensureLegacyMapHooks();
-    if (!document.querySelector('link[data-stormlens-premium]')) {
-      const css = document.createElement('link');
-      css.rel = 'stylesheet';
-      css.href = 'premium-overlays.css?v=20260812-3';
-      css.dataset.stormlensPremium = 'true';
-      document.head.appendChild(css);
-    }
-    loadScript('premium-overlays.js?v=20260812-3', 'stormlensPremium');
-    loadScript('premium-bridge.js?v=20260812-3', 'stormlensBridge');
+    loadStylesheet('map-runtime-fix.css?v=20260812-6', 'stormlensRuntimeFix');
+    loadStylesheet('premium-overlays.css?v=20260812-6', 'stormlensPremium');
+    // Keep order deterministic: runtime WMS patch -> overlay engine -> compatibility bridge.
+    loadScript('map-runtime-fix.js?v=20260812-6', 'stormlensRuntimeFix');
+    loadScript('premium-overlays.js?v=20260812-6', 'stormlensPremium');
+    loadScript('premium-bridge.js?v=20260812-6', 'stormlensBridge');
   }
 
   if (document.readyState === 'loading') {
