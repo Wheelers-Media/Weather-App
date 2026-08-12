@@ -7,32 +7,22 @@
     const layerName = options.layers || '';
     const isObservedRadar = layerName === 'RADAR_1KM_RRAI';
     const isRadarNowcast = layerName === 'Radar_1km_RainPrecipRate-Extrapolation';
-
     const patched = { ...options };
 
-    if (isObservedRadar) {
-      // Use the current ECCC rain-radar palette and the most broadly compatible
-      // WMS version for Leaflet tile requests.
-      patched.styles = 'Radar-Rain_14colors';
-      patched.version = '1.1.1';
-      patched.uppercase = false;
-    }
-
-    if (isRadarNowcast) {
-      // Let GeoMet choose its default style. Applying the observed-radar style to
-      // the nowcast product can return empty/error tiles on some GeoMet revisions.
+    if (isObservedRadar || isRadarNowcast) {
+      // Follow ECCC's own web-map example: request the radar product with its
+      // server default WMS style. WMS 1.1.1 is also the safest Leaflet path.
       patched.styles = '';
       patched.version = '1.1.1';
       patched.uppercase = false;
     }
 
     const layer = originalWms.call(this, url, patched);
-
     if (!isObservedRadar && !isRadarNowcast) return layer;
 
     let loaded = 0;
     let errors = 0;
-    let fallbackTried = false;
+    let settled = false;
 
     const setStatus = text => {
       const el = document.getElementById('mapLayerStatus');
@@ -40,11 +30,13 @@
     };
 
     layer.on('loading', () => {
+      settled = false;
       setStatus(isObservedRadar ? 'Observed radar · connecting' : 'Radar nowcast · connecting');
     });
 
     layer.on('tileload', () => {
       loaded += 1;
+      settled = true;
       if (loaded === 1) {
         setStatus(isObservedRadar ? 'Observed radar · LIVE' : 'Radar nowcast · LIVE');
       }
@@ -52,27 +44,31 @@
 
     layer.on('tileerror', () => {
       errors += 1;
-      if (!fallbackTried && loaded === 0 && errors >= 2) {
-        fallbackTried = true;
-        // Final compatibility fallback: use ECCC's default style.
-        layer.wmsParams.styles = '';
-        layer.wmsParams.version = '1.1.1';
-        layer.options.uppercase = false;
-        setStatus('Radar · retrying ECCC feed');
+      if (loaded === 0 && errors >= 3) {
+        settled = true;
+        setStatus('Radar feed error · retrying');
         layer.redraw();
-      } else if (fallbackTried && loaded === 0 && errors >= 6) {
-        setStatus('Radar feed unavailable · tap another layer');
+      }
+      if (loaded === 0 && errors >= 8) {
+        setStatus('ECCC radar unavailable right now');
       }
     });
 
     layer.on('load', () => {
       if (loaded > 0) {
+        settled = true;
         const timestamp = document.getElementById('radarTimestamp');
         if (timestamp && timestamp.textContent === 'Latest available') {
           timestamp.textContent = 'Latest ECCC frame';
         }
       }
     });
+
+    setTimeout(() => {
+      if (!settled && loaded === 0 && errors === 0) {
+        setStatus('Radar · waiting for ECCC');
+      }
+    }, 6000);
 
     return layer;
   };
