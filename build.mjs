@@ -37,7 +37,7 @@ const appPath = path.join(out, 'app.js');
 let app = await fs.readFile(appPath, 'utf8');
 app = app.replace(
   'initMap();\n        state.map && state.map.invalidateSize();',
-  "window.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'));"
+  "document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'));"
 );
 app = app.replace(
   "$('#openStormMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>setMapLayer('storms'),120); });",
