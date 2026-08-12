@@ -105,6 +105,70 @@
   .radar-controller { right:44px; width:410px; }
 }
 
+/* Large desktop and 4K displays should not turn the app into a tiny HUD. */
+@media (min-width: 2000px) and (min-height: 1000px) {
+  :root { --desktop-rail: 122px; }
+  .topbar {
+    height:96px;
+    grid-template-columns:minmax(280px,1fr) auto 58px;
+    padding:20px 48px;
+  }
+  .desktop-brand { gap:14px; }
+  .desktop-brand-mark { width:48px; height:48px; border-radius:16px; }
+  .desktop-brand-mark svg { width:23px; height:23px; }
+  .desktop-brand strong { font-size:18px; }
+  .desktop-brand small { font-size:11px; }
+  .location-pill { max-width:430px; }
+  .location-pill strong { font-size:18px; }
+  .location-pill small { font-size:12px; }
+  .icon-button { width:54px; height:54px; border-radius:17px; }
+
+  .bottom-nav { grid-template-rows:repeat(4,96px); gap:10px; padding:24px 15px; }
+  .nav-item { min-height:88px; border-radius:23px; gap:9px; font-size:12px; }
+  .nav-item svg { width:26px; height:26px; }
+  .nav-item.active::before { left:-15px; width:4px; height:36px; }
+
+  .map-top-overlay { top:120px; left:56px; right:56px; }
+  .map-status-pill { height:52px; padding:0 18px; border-radius:17px; font-size:14px; }
+  .map-fab { width:52px; height:52px; border-radius:17px; }
+  .map-layer-rail { top:184px; left:56px; right:590px; gap:10px; }
+  .layer-chip { min-height:46px; padding:0 16px; border-radius:16px; font-size:13px; gap:8px; }
+  .layer-chip svg { width:19px; height:19px; }
+  .radar-controller {
+    right:56px; bottom:46px; width:500px;
+    padding:22px; border-radius:30px;
+  }
+  .radar-controller-head strong { font-size:16px; }
+  .radar-controller-head .eyebrow { font-size:11px; }
+  .mini-icon { width:42px; height:42px; }
+  .play-button { width:48px; height:48px; }
+  .timeline-labels { font-size:10px; }
+  .legend-row { font-size:10px; gap:12px; }
+  .radar-source-line { font-size:10px; }
+  .sheet { width:min(760px,calc(100vw - var(--desktop-rail) - 70px)); }
+}
+
+@media (min-width: 3200px) and (min-height: 1600px) {
+  :root { --desktop-rail: 146px; }
+  .topbar { height:116px; padding:24px 64px; }
+  .desktop-brand-mark { width:58px; height:58px; }
+  .desktop-brand strong { font-size:22px; }
+  .desktop-brand small { font-size:13px; }
+  .location-pill strong { font-size:21px; }
+  .location-pill small { font-size:14px; }
+  .bottom-nav { grid-template-rows:repeat(4,112px); }
+  .nav-item { min-height:102px; font-size:14px; }
+  .nav-item svg { width:30px; height:30px; }
+  .map-top-overlay { top:142px; left:72px; right:72px; }
+  .map-status-pill { height:60px; padding:0 22px; font-size:16px; }
+  .map-fab { width:60px; height:60px; }
+  .map-layer-rail { top:216px; left:72px; right:720px; }
+  .layer-chip { min-height:54px; padding:0 20px; font-size:15px; }
+  .radar-controller { right:72px; bottom:56px; width:590px; padding:26px; }
+  .radar-controller-head strong { font-size:19px; }
+  .legend-row { font-size:12px; }
+}
+
 @media (max-width: 759px) {
   .app-shell { width:100%; max-width:none; }
   .desktop-brand { display:none; }
