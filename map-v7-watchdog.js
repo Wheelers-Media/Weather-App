@@ -71,6 +71,12 @@
     }, 12000);
   }
 
+  function isWeatherProviderError(event, message) {
+    const sourceId = String(event?.sourceId || event?.source?.id || event?.source?.sourceId || '');
+    if (/^stormlens-(eccc|tomorrow)-source/.test(sourceId)) return true;
+    return /geo\.weather\.gc\.ca|\/api\/tomorrow-(tile|probe)/i.test(message);
+  }
+
   function watchScreenVisibility() {
     const screen = document.getElementById('mapScreen');
     if (!screen || !window.MutationObserver) return;
@@ -94,6 +100,10 @@
 
     map.on('error', event => {
       const message = String(event?.error?.message || event?.message || 'MapTiler render error');
+      if (isWeatherProviderError(event, message)) {
+        console.warn('[StormLens weather provider tile error]', message);
+        return;
+      }
       errorCount += 1;
       if (!firstError) firstError = message;
       console.warn('[StormLens V7 map error]', message);
