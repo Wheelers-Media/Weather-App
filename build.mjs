@@ -25,9 +25,28 @@ html = html.replace(
   'width=device-width, initial-scale=1, viewport-fit=cover',
   'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'
 );
+html = html.replace(/\s*<link rel="stylesheet" href="https:\/\/unpkg\.com\/leaflet@[^>]+>\s*/i, '\n');
+html = html.replace(/\s*<script src="https:\/\/unpkg\.com\/leaflet@[^>]+><\/script>\s*/i, '\n  ');
 if (!html.includes('maptiler-env.js')) {
   html = html.replace('<script src="radar-fix.js"></script>', '<script src="maptiler-env.js"></script>\n  <script src="radar-fix.js"></script>');
 }
 await fs.writeFile(indexPath, html, 'utf8');
 
-console.log(`StormLens build complete. MapTiler: ${mapTilerKey ? 'configured' : 'not configured'}`);
+// Keep the original weather/home application, but remove its legacy Leaflet map ownership.
+const appPath = path.join(out, 'app.js');
+let app = await fs.readFile(appPath, 'utf8');
+app = app.replace(
+  'initMap();\n        state.map && state.map.invalidateSize();',
+  "window.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'));"
+);
+app = app.replace(
+  "$('#openStormMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>setMapLayer('storms'),120); });",
+  "$('#openStormMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>document.dispatchEvent(new CustomEvent('stormlens:map-select-layer',{detail:{id:'storms'}})),120); });"
+);
+app = app.replace(
+  "$('#openLightningMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>setMapLayer('lightning'),120); });",
+  "$('#openLightningMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>document.dispatchEvent(new CustomEvent('stormlens:map-select-layer',{detail:{id:'lightning'}})),120); });"
+);
+await fs.writeFile(appPath, app, 'utf8');
+
+console.log(`StormLens V10 build complete. MapTiler: ${mapTilerKey ? 'configured' : 'not configured'}`);
