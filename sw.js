@@ -1,5 +1,5 @@
-const CACHE='stormlens-v5-premium-overlays-20260812-3';
-const APP=['./','./index.html','./styles.css','./desktop.css','./premium-overlays.css','./premium-data.css','./app.js','./radar-fix.js','./premium-overlays.js','./premium-bridge.js','./premium-home.js','./premium-lightning.js','./manifest.json','./icon-192.png','./icon-512.png'];
+const CACHE='stormlens-v6-map-runtime-20260812';
+const APP=['./','./index.html','./styles.css','./desktop.css','./premium-overlays.css','./premium-data.css','./map-runtime-fix.css','./app.js','./radar-fix.js','./map-runtime-fix.js','./premium-overlays.js','./premium-bridge.js','./premium-home.js','./premium-lightning.js','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP)));
@@ -10,7 +10,7 @@ self.addEventListener('activate',event=>event.waitUntil(Promise.all([
 ])));
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET') return;
-  const url=new URL(event.request.url);
+  const url=new URL(e.request?.url || event.request.url);
   if(url.origin!==location.origin) return;
   if(event.request.mode==='navigate'){
     event.respondWith(fetch(event.request).catch(()=>caches.match('./index.html')));
