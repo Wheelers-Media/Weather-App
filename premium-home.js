@@ -3,6 +3,16 @@
   let inFlight = false;
   let lastFingerprint = '';
 
+  function loadPlaybackController() {
+    if (window.StormLensPlaybackV9 || document.querySelector('script[data-stormlens-playback-v9]')) return;
+    const script = document.createElement('script');
+    script.src = 'playback-v9.js?v=20260812-1';
+    script.async = false;
+    script.dataset.stormlensPlaybackV9 = 'true';
+    script.addEventListener('error', () => console.warn('[StormLens] playback-v9.js failed to load'), { once:true });
+    document.body.appendChild(script);
+  }
+
   async function getProviderStatus() {
     if (providerStatus) return providerStatus;
     try {
@@ -102,6 +112,7 @@
 
   const observer = new MutationObserver(() => setTimeout(enhanceHome, 0));
   const start = () => {
+    loadPlaybackController();
     const home = document.getElementById('homeContent');
     if (home) observer.observe(home, { childList:true, subtree:false });
     enhanceHome();
