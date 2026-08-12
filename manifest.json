@@ -4,10 +4,10 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#070b12",
   "theme_color": "#070b12",
-  "description": "A radar-first weather and storm tracking app for Canada.",
+  "description": "Radar-first weather, storm tracking, forecasts and official Canadian alerts.",
   "categories": ["weather", "utilities"],
   "icons": [
     {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
