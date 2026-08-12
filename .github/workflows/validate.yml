@@ -17,7 +17,6 @@ jobs:
         run: |
           node --check app.js
           node --check radar-fix.js
-          node --check map-quality-v10.js
           node --check map-core-v10.js
           node --check map-v10-bridge.js
           node --check premium-home.js
@@ -41,8 +40,6 @@ jobs:
         run: |
           npm run build
           test -f dist/index.html
-          test -f dist/map-quality-v10.js
-          test -f dist/map-quality-v10.css
           test -f dist/map-core-v10.js
           test -f dist/map-core-v10.css
           test -f dist/map-v10-bridge.js
@@ -52,9 +49,6 @@ jobs:
           grep -q "user-scalable=no" dist/index.html
           grep -q "document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'))" dist/app.js
           grep -q "document.addEventListener('stormlens:map-screen-visible'" dist/map-core-v10.js
-          grep -q "map-quality-v10.js" dist/radar-fix.js
-          grep -q "lightningFlashRateDensity" dist/map-quality-v10.js
-          grep -q "10–25 dBZ" dist/map-quality-v10.js
           grep -q "StormLensMapV10" dist/map-core-v10.js
           grep -q "stormlens-user-location-dot" dist/map-core-v10.js
           grep -q "Radar forecast" dist/map-core-v10.js
