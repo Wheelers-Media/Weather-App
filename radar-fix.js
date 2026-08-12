@@ -27,8 +27,9 @@
 
   function normalizeLegacyLayer(key, engine) {
     const isV7 = engine === window.StormLensMapV7;
+    const stormLayer = isV7 && engine.tomorrowEnabled && engine.defs?.futureThunderstorms ? 'futureThunderstorms' : 'thunderRisk';
     const maps = isV7 ? {
-      radar:'observedRadar', nowcast:'nowcast', lightning:'lightning', storms:'thunderRisk', alerts:'alerts',
+      radar:'observedRadar', nowcast:'nowcast', lightning:'lightning', storms:stormLayer, alerts:'alerts',
       futureprecip:'precipitation', preciptype:'precipType', precipprob:'precipProb', temperature:'temperature', windgust:'windGust'
     } : {
       radar:'radar', nowcast:'nowcast', lightning:'lightning', storms:'thunderRisk', alerts:'alerts',
@@ -41,7 +42,7 @@
     const quick = id === 'radar' || id === 'observedRadar' ? 'radar'
       : id === 'nowcast' ? 'nowcast'
       : id === 'lightning' ? 'lightning'
-      : id === 'thunderRisk' ? 'storms'
+      : id === 'thunderRisk' || id === 'futureThunderstorms' ? 'storms'
       : id === 'alerts' ? 'alerts'
       : null;
     document.querySelectorAll('#quickLayers [data-layer]').forEach(button => {
@@ -107,8 +108,6 @@
     if (routerInstalled) return;
     routerInstalled = true;
 
-    // This file loads before app.js. Capture-phase routing means the old map handlers
-    // never get a second chance to change the layer, legend or timeline independently.
     document.addEventListener('click', event => {
       const quick = event.target.closest?.('#quickLayers [data-layer]');
       if (quick) {
@@ -161,7 +160,7 @@
       if (id) syncQuickSelection(id);
     });
 
-    const readyEvents = ['stormlens:map-ready','stormlens:v7-ready'];
+    const readyEvents = ['stormlens:map-ready','stormlens:v7-ready','stormlens:tomorrow-ready'];
     readyEvents.forEach(name => window.addEventListener(name, () => setTimeout(flushPending, 40)));
     setInterval(flushPending, 250);
   }
@@ -226,12 +225,12 @@
     const legacy = document.getElementById('weatherMap');
     if (legacy) { legacy.style.opacity='1'; legacy.style.pointerEvents='auto'; }
     await Promise.all([
-      addStylesheet('map-v6.css?v=20260812-5','map-v6'),
+      addStylesheet('map-v6.css?v=20260812-6','map-v6'),
       addStylesheet('premium-data.css?v=20260812-1','premium-data')
     ]);
-    await loadScript('map-v6.js?v=20260812-5','map-v6');
-    await loadScript('map-v6-guard.js?v=20260812-5','map-v6-guard');
-    await loadScript('premium-bridge.js?v=20260812-7','premium-bridge-v6');
+    await loadScript('map-v6.js?v=20260812-6','map-v6');
+    await loadScript('map-v6-guard.js?v=20260812-6','map-v6-guard');
+    await loadScript('premium-bridge.js?v=20260812-8','premium-bridge-v6');
     document.documentElement.dataset.mapEngine='v6';
     flushPending();
     const status=document.getElementById('mapLayerStatus');
@@ -240,20 +239,21 @@
 
   async function loadV7() {
     await Promise.all([
-      addStylesheet('map-v6.css?v=20260812-5','map-v6-shared-ui'),
-      addStylesheet('map-v7.css?v=20260812-4','map-v7'),
+      addStylesheet('map-v6.css?v=20260812-6','map-v6-shared-ui'),
+      addStylesheet('map-v7.css?v=20260812-5','map-v7'),
       addStylesheet('premium-data.css?v=20260812-1','premium-data'),
       addStylesheet('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.css','maptiler-sdk')
     ]);
 
     await loadScript('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.umd.min.js','maptiler-sdk');
     await loadScript('https://cdn.maptiler.com/maptiler-weather/v3.1.1/maptiler-weather.umd.min.js','maptiler-weather');
-    await loadScript('map-v7-compat.js?v=20260812-4','map-v7-compat');
+    await loadScript('map-v7-compat.js?v=20260812-5','map-v7-compat');
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    await loadScript('map-v7.js?v=20260812-4','map-v7');
-    await loadScript('map-v7-runtime.js?v=20260812-4','map-v7-runtime');
-    await loadScript('map-v7-watchdog.js?v=20260812-3','map-v7-watchdog');
-    await loadScript('premium-bridge.js?v=20260812-7','premium-bridge-v7');
+    await loadScript('map-v7.js?v=20260812-5','map-v7');
+    await loadScript('tomorrow-map.js?v=20260812-1','tomorrow-map');
+    await loadScript('map-v7-runtime.js?v=20260812-5','map-v7-runtime');
+    await loadScript('map-v7-watchdog.js?v=20260812-4','map-v7-watchdog');
+    await loadScript('premium-bridge.js?v=20260812-8','premium-bridge-v7');
     document.documentElement.dataset.mapEngine='v7';
     flushPending();
   }
