@@ -19,6 +19,7 @@ jobs:
           node --check radar-fix.js
           node --check map-v6.js
           node --check map-v6-guard.js
+          node --check map-v7-compat.js
           node --check map-v7.js
           node --check map-v7-runtime.js
           node --check premium-bridge.js
@@ -44,6 +45,7 @@ jobs:
         run: |
           npm run build
           test -f dist/index.html
+          test -f dist/map-v7-compat.js
           test -f dist/map-v7.js
           test -f dist/map-v7.css
           test -f dist/map-v7-runtime.js
