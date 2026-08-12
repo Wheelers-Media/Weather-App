@@ -232,16 +232,46 @@
     const legacy = document.getElementById('weatherMap');
     if (legacy) { legacy.style.opacity='1'; legacy.style.pointerEvents='auto'; }
     await Promise.all([
-      addStylesheet('map-v6.css?v=20260812-8','map-v6'),
+      addStylesheet('map-v6.css?v=20260812-9','map-v6'),
       addStylesheet('premium-data.css?v=20260812-1','premium-data')
     ]);
-    await loadScript('map-v6.js?v=20260812-8','map-v6');
-    await loadScript('map-v6-guard.js?v=20260812-8','map-v6-guard');
-    await loadScript('premium-bridge.js?v=20260812-9','premium-bridge-v6');
+    await loadScript('map-v6.js?v=20260812-9','map-v6');
+    await loadScript('map-v6-guard.js?v=20260812-9','map-v6-guard');
+    await loadScript('premium-bridge.js?v=20260812-10','premium-bridge-v6');
     document.documentElement.dataset.mapEngine='v6';
     flushPending();
     const status=document.getElementById('mapLayerStatus');
     if (status && reason) status.dataset.fallbackReason = reason;
+  }
+
+  function mapScreenHasLayout() {
+    const screen = document.getElementById('mapScreen');
+    if (!screen || !screen.classList.contains('active')) return false;
+    const rect = screen.getBoundingClientRect();
+    return rect.width >= 240 && rect.height >= 320;
+  }
+
+  function waitForMapScreenVisible() {
+    if (mapScreenHasLayout()) return Promise.resolve();
+    return new Promise(resolve => {
+      let done = false;
+      const finish = () => {
+        if (done || !mapScreenHasLayout()) return;
+        done = true;
+        observer?.disconnect();
+        document.removeEventListener('click', onClick, true);
+        clearInterval(poll);
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      };
+      const screen = document.getElementById('mapScreen');
+      const observer = screen && window.MutationObserver ? new MutationObserver(finish) : null;
+      observer?.observe(screen, { attributes:true, attributeFilter:['class','style'] });
+      const onClick = event => {
+        if (event.target.closest?.('.nav-item[data-target="map"]')) setTimeout(finish, 100);
+      };
+      document.addEventListener('click', onClick, true);
+      const poll = setInterval(finish, 120);
+    });
   }
 
   function waitForV8Ready(timeoutMs=18000) {
@@ -263,19 +293,44 @@
     });
   }
 
+  async function assertV8Canvas() {
+    const engine = window.StormLensMapV8;
+    const map = engine?.map;
+    if (!map) throw new Error('V8 map instance missing');
+    try { map.resize?.(); } catch (_) {}
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const canvas = map.getCanvas?.();
+    const container = document.getElementById('stormlensMapV8');
+    const rect = container?.getBoundingClientRect?.();
+    const cssWidth = Number(rect?.width || 0);
+    const cssHeight = Number(rect?.height || 0);
+    const pixelWidth = Number(canvas?.width || 0);
+    const pixelHeight = Number(canvas?.height || 0);
+    const styleLoaded = Boolean(map.isStyleLoaded?.());
+    if (!styleLoaded || cssWidth < 240 || cssHeight < 320 || pixelWidth < 240 || pixelHeight < 320) {
+      throw new Error('WebGL map canvas did not size correctly');
+    }
+  }
+
   async function loadV8() {
     await Promise.all([
-      addStylesheet('map-v6.css?v=20260812-8','map-v6-shared-ui'),
-      addStylesheet('map-v8.css?v=20260812-1','map-v8'),
+      addStylesheet('map-v6.css?v=20260812-9','map-v6-shared-ui'),
+      addStylesheet('map-v8.css?v=20260812-2','map-v8'),
       addStylesheet('premium-data.css?v=20260812-1','premium-data'),
       addStylesheet('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.css','maptiler-sdk')
     ]);
     await loadScript('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.umd.min.js','maptiler-sdk');
     await loadScript('https://cdn.maptiler.com/maptiler-weather/v3.1.1/maptiler-weather.umd.min.js','maptiler-weather');
+
+    // MapLibre/MapTiler must be created in a visible, non-zero-sized container.
+    // Creating it while the Home screen is active can produce a blank Android canvas.
+    await waitForMapScreenVisible();
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    await loadScript('map-v8.js?v=20260812-1','map-v8');
+
+    await loadScript('map-v8.js?v=20260812-2','map-v8');
     await loadScript('premium-home.js?v=20260812-1','premium-home-v8');
     await waitForV8Ready();
+    await assertV8Canvas();
     document.documentElement.dataset.mapEngine='v8';
     flushPending();
   }
