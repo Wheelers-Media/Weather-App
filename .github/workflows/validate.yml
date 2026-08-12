@@ -19,10 +19,13 @@ jobs:
           node --check radar-fix.js
           node --check map-v6.js
           node --check map-v6-guard.js
+          node --check map-v7.js
+          node --check map-v7-runtime.js
           node --check premium-bridge.js
           node --check premium-home.js
           node --check premium-lightning.js
           node --check sw.js
+          node --check build.mjs
           node --check scripts/check-geomet.mjs
           node --check scripts/check-geomet-render.mjs
       - name: Check Vercel API module syntax
@@ -34,6 +37,19 @@ jobs:
         run: |
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
+      - name: Test production build and MapTiler injection
+        env:
+          MAPTILER_API_KEY: ci_test_maptiler_key
+        run: |
+          npm run build
+          test -f dist/index.html
+          test -f dist/map-v7.js
+          test -f dist/map-v7.css
+          test -f dist/map-v7-runtime.js
+          test -f dist/maptiler-env.js
+          grep -q "maptiler-env.js" dist/index.html
+          grep -q "ci_test_maptiler_key" dist/maptiler-env.js
       - name: Validate live ECCC GeoMet layers
         run: node scripts/check-geomet.mjs
       - name: Render key Calgary GeoMet products
