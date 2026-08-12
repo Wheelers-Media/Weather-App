@@ -66,6 +66,7 @@
 
     await loadScript('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.umd.min.js','maptiler-sdk');
     await loadScript('https://cdn.maptiler.com/maptiler-weather/v3.1.1/maptiler-weather.umd.min.js','maptiler-weather');
+    await loadScript('map-v7-compat.js?v=20260812-1','map-v7-compat');
     await loadScript('map-v7.js?v=20260812-1','map-v7');
     await loadScript('map-v7-runtime.js?v=20260812-1','map-v7-runtime');
     await loadScript('premium-bridge.js?v=20260812-4','premium-bridge');
