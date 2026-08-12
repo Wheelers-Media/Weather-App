@@ -1,0 +1,9 @@
+{
+  "name": "stormlens-weather",
+  "private": true,
+  "version": "0.7.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}
