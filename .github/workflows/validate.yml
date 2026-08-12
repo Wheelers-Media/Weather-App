@@ -19,6 +19,8 @@ jobs:
           node --check radar-fix.js
           node --check premium-overlays.js
           node --check premium-bridge.js
+          node --check premium-home.js
+          node --check premium-lightning.js
           node --check sw.js
           node --check scripts/check-geomet.mjs
       - name: Check Vercel API module syntax
