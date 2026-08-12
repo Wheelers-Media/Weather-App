@@ -22,6 +22,7 @@ jobs:
           node --check map-v7-compat.js
           node --check map-v7.js
           node --check map-v7-runtime.js
+          node --check map-v7-watchdog.js
           node --check premium-bridge.js
           node --check premium-home.js
           node --check premium-lightning.js
@@ -49,9 +50,12 @@ jobs:
           test -f dist/map-v7.js
           test -f dist/map-v7.css
           test -f dist/map-v7-runtime.js
+          test -f dist/map-v7-watchdog.js
           test -f dist/maptiler-env.js
           grep -q "maptiler-env.js" dist/index.html
           grep -q "ci_test_maptiler_key" dist/maptiler-env.js
+          grep -q "maximum-scale=1" dist/index.html
+          grep -q "user-scalable=no" dist/index.html
       - name: Validate live ECCC GeoMet layers
         run: node scripts/check-geomet.mjs
       - name: Render key Calgary GeoMet products
