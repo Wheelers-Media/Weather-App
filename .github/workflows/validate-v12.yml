@@ -20,6 +20,7 @@ jobs:
           node --check timeline-polish-v14.js
           node --check day-weather-v14.js
           node --check day-aqi-v14.js
+          node --check day-status-v14.js
           node --check responsive-v13.js
           node --check radar-fix.js
           node --check weather-runtime-v11.js
@@ -36,10 +37,12 @@ jobs:
           test -f dist/timeline-polish-v14.js
           test -f dist/day-weather-v14.js
           test -f dist/day-aqi-v14.js
+          test -f dist/day-status-v14.js
           grep -q "premium-polish-v14.css" dist/index.html
           grep -q "timeline-polish-v14.js" dist/index.html
           grep -q "day-weather-v14.js" dist/index.html
           grep -q "day-aqi-v14.js" dist/index.html
+          grep -q "day-status-v14.js" dist/index.html
           grep -q "responsive-v13.css" dist/index.html
           grep -q "Government alerts" dist/premium-details-v12.js
           grep -q "Sun & daylight" dist/premium-details-v12.js
