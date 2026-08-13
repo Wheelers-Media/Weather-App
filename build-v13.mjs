@@ -22,7 +22,7 @@ if(!html.includes('responsive-v13.js')){
   html=html.replace('<script src="maptiler-env.js"></script>','<script src="responsive-v13.js?v=20260813-1"></script>\n  <script src="maptiler-env.js"></script>');
 }
 if(!html.includes('timeline-polish-v14.js')){
-  html=html.replace('<script src="maptiler-env.js"></script>','<script src="timeline-polish-v14.js?v=20260813-1"></script>\n  <script src="day-weather-v14.js?v=20260813-1"></script>\n  <script src="day-aqi-v14.js?v=20260813-1"></script>\n  <script src="maptiler-env.js"></script>');
+  html=html.replace('<script src="maptiler-env.js"></script>','<script src="timeline-polish-v14.js?v=20260813-1"></script>\n  <script src="day-weather-v14.js?v=20260813-1"></script>\n  <script src="day-aqi-v14.js?v=20260813-1"></script>\n  <script src="day-status-v14.js?v=20260813-1"></script>\n  <script src="maptiler-env.js"></script>');
 }
 await fs.writeFile(indexFile,html,'utf8');
 console.log('StormLens V14 responsive shell, timeline and daily metrics applied.');
