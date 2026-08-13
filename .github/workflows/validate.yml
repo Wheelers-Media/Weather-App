@@ -25,6 +25,7 @@ jobs:
           node --check premium-home.js
           node --check sw.js
           node --check build.mjs
+          node --check build-post-v10.mjs
           node --check scripts/check-geomet.mjs
           node --check scripts/check-geomet-render.mjs
           node --check scripts/smoke-map-layers.mjs
@@ -39,7 +40,7 @@ jobs:
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
-      - name: Test V10.3 production build
+      - name: Test V10.4 production build
         env:
           MAPTILER_API_KEY: ci_test_maptiler_key
         run: |
@@ -62,7 +63,6 @@ jobs:
           grep -q "maximumAge:0" dist/app.js
           grep -q "City, address or place" dist/app-polish-v10.js
           grep -q "saved-location-remove" dist/app-polish-v10.js
-          grep -q "SMOOTH" dist/app-polish-v10.js
           grep -q "document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'))" dist/app.js
           grep -q "document.addEventListener('stormlens:map-screen-visible'" dist/map-core-v10.js
           grep -q "StormLensMapV10" dist/map-core-v10.js
@@ -73,14 +73,15 @@ jobs:
           grep -q "title:'Storm'.*provider:'maptiler'" dist/map-core-v10.js
           grep -q "if(key==='lightning')return'lightning'" dist/map-core-v10.js
           grep -q "if(key==='storms')return'storm'" dist/map-core-v10.js
-          grep -q "WIDTH:size,HEIGHT:size" dist/map-core-v10.js
           grep -q "slider.addEventListener('change'" dist/map-core-v10.js
-          grep -q "bufferRaster(5)" dist/map-core-v10.js
-          grep -q "getCanvasStrip" dist/map-core-v10.js
-          grep -q "GetLegendGraphic" dist/map-core-v10.js
+          grep -q "bufferRaster(2)" dist/map-core-v10.js
+          grep -q "new maptilerweather.ColorRamp" dist/map-core-v10.js
+          grep -q "id!='showalter'" dist/map-core-v10.js
+          grep -q "HRDPS-WEonG_2.5km_Thunderstorm-Prob" dist/map-core-v10.js
           grep -q "stormlens-location-accuracy-source" dist/location-accuracy-v10.js
           grep -q "stormlens-storm-lightning-density" dist/storm-composite-v10.js
           grep -q "navigator.vibrate" dist/storm-composite-v10.js
+          if grep -q "FORECAST · SMOOTH" dist/map-core-v10.js; then echo "Smooth label still present"; exit 1; fi
           if grep -q "window.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'))" dist/app.js; then echo "V10 map-visible event emitted on wrong target"; exit 1; fi
           if grep -q "unpkg.com/leaflet" dist/index.html; then echo "Leaflet still present in production index"; exit 1; fi
           if grep -q "initMap();" dist/app.js; then echo "Legacy map startup still present in production app"; exit 1; fi
