@@ -3,7 +3,7 @@ const bbox = '-12880000,6470000,-12520000,6780000'; // Calgary / southern Albert
 
 const checks = [
   { id:'RADAR_1KM_RRAI', style:'RADARURPPRECIPR14-LINEAR', label:'Official radar' },
-  { id:'Radar_1km_RainPrecipRate-Extrapolation', style:'RADARURPPRECIPR14-LINEAR', label:'Official radar nowcast' },
+  { id:'Radar_1km_RainPrecipRate-Extrapolation', style:'', label:'Official radar nowcast' },
   { id:'Radar_1km_SfcPrecipType', style:'', label:'Observed precip type' },
   { id:'HRDPS-WEonG_2.5km_Precip-Prob', style:'', label:'Precipitation probability' },
   { id:'HRDPS.CONTINENTAL_RN', style:'', label:'Rain accumulation' },
@@ -17,11 +17,13 @@ const checks = [
   { id:'RAQDPS.Sfc_PM2.5-WildfireSmokePlume', style:'', label:'Wildfire smoke PM2.5' }
 ];
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-async function fetchWithTimeout(url, options={}, timeoutMs=20000) {
+async function fetchWithTimeout(url, options={}, timeoutMs=30000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try { return await fetch(url, { ...options, signal:controller.signal }); }
@@ -45,19 +47,19 @@ async function layerMetadata(def) {
   let time = defaultTime;
   if (!time && content) {
     const lastPart = content.split(',').map(v=>v.trim()).filter(Boolean).at(-1) || '';
-    if (lastPart.includes('/')) time = lastPart.split('/')[1] || '';
-    else time = lastPart;
+    time = lastPart.includes('/') ? (lastPart.split('/')[1] || '') : lastPart;
   }
   return { time };
 }
 
 async function render(def) {
   const meta = await layerMetadata(def);
+  await sleep(350);
   const q = new URLSearchParams({
     SERVICE:'WMS', VERSION:'1.3.0', REQUEST:'GetMap',
     LAYERS:def.id, STYLES:def.style || '',
     CRS:'EPSG:3857', BBOX:bbox,
-    WIDTH:'768', HEIGHT:'768', FORMAT:'image/png', TRANSPARENT:'TRUE'
+    WIDTH:'640', HEIGHT:'640', FORMAT:'image/png', TRANSPARENT:'TRUE'
   });
   if (meta.time) q.set('TIME', meta.time);
   const response = await fetchWithTimeout(`${endpoint}?${q}`, { headers:{'User-Agent':'StormLens-Smoke/1.0'} });
@@ -68,22 +70,19 @@ async function render(def) {
 }
 
 const results=[];
-for (let i=0;i<checks.length;i+=4) {
-  const batch=checks.slice(i,i+4);
-  const settled=await Promise.allSettled(batch.map(render));
-  settled.forEach((result,index) => {
-    const def=batch[index];
-    if (result.status === 'fulfilled') {
-      results.push({ok:true,def,...result.value});
-      console.log(`OK   ${def.label.padEnd(33)} ${String(result.value.bytes).padStart(8)} bytes  ${result.value.time}`);
-    } else {
-      results.push({ok:false,def,error:result.reason?.message || String(result.reason)});
-      console.error(`FAIL ${def.label.padEnd(33)} ${result.reason?.message || result.reason}`);
-    }
-  });
+for (const def of checks) {
+  try {
+    const result=await render(def);
+    results.push({ok:true,def,...result});
+    console.log(`OK   ${def.label.padEnd(33)} ${String(result.bytes).padStart(8)} bytes  ${result.time}`);
+  } catch(error) {
+    results.push({ok:false,def,error:error.message});
+    console.error(`FAIL ${def.label.padEnd(33)} ${error.message}`);
+  }
+  await sleep(850);
 }
 
 const failures=results.filter(r=>!r.ok);
 console.log(`\nRendered ${results.length-failures.length}/${results.length} ECCC layers successfully.`);
-console.log('Note: a valid transparent/quiet PNG means the provider works even when no weather activity exists in the Calgary viewport.');
+console.log('A valid quiet/transparent PNG means the service works even when there is no weather activity in the Calgary viewport.');
 if (failures.length) process.exit(1);
