@@ -16,6 +16,7 @@ jobs:
       - name: Check browser JavaScript syntax
         run: |
           node --check app.js
+          node --check app-polish-v10.js
           node --check radar-fix.js
           node --check map-core-v10.js
           node --check map-v10-bridge.js
@@ -26,6 +27,8 @@ jobs:
           node --check build.mjs
           node --check scripts/check-geomet.mjs
           node --check scripts/check-geomet-render.mjs
+          node --check scripts/smoke-map-layers.mjs
+          node --check scripts/smoke-public-services.mjs
       - name: Check Vercel API module syntax
         run: |
           for file in api/*.js; do
@@ -36,12 +39,13 @@ jobs:
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
-      - name: Test V10.2 production build
+      - name: Test V10.3 production build
         env:
           MAPTILER_API_KEY: ci_test_maptiler_key
         run: |
           npm run build
           test -f dist/index.html
+          test -f dist/app-polish-v10.js
           test -f dist/map-core-v10.js
           test -f dist/map-core-v10.css
           test -f dist/map-polish-v10.css
@@ -56,6 +60,9 @@ jobs:
           grep -q ">Storm<" dist/index.html
           grep -q "getBestDevicePosition" dist/app.js
           grep -q "maximumAge:0" dist/app.js
+          grep -q "City, address or place" dist/app-polish-v10.js
+          grep -q "saved-location-remove" dist/app-polish-v10.js
+          grep -q "SMOOTH" dist/app-polish-v10.js
           grep -q "document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'))" dist/app.js
           grep -q "document.addEventListener('stormlens:map-screen-visible'" dist/map-core-v10.js
           grep -q "StormLensMapV10" dist/map-core-v10.js
@@ -81,6 +88,9 @@ jobs:
       - name: Validate live ECCC GeoMet layers
         continue-on-error: true
         run: node scripts/check-geomet.mjs
-      - name: Render key Calgary GeoMet products
+      - name: Render all ECCC map products used in V10
         continue-on-error: true
-        run: node scripts/check-geomet-render.mjs
+        run: node scripts/smoke-map-layers.mjs
+      - name: Smoke public weather services
+        continue-on-error: true
+        run: node scripts/smoke-public-services.mjs
