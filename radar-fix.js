@@ -42,19 +42,19 @@
     try {
       status('Map engine · loading', 'loading');
       await Promise.all([
-        addStyle('map-v6.css?v=20260813-2', 'shared-map-ui'),
-        addStyle('map-core-v10.css?v=20260813-2', 'map-core-v10'),
-        addStyle('map-polish-v10.css?v=20260813-2', 'map-polish-v10'),
+        addStyle('map-v6.css?v=20260813-3', 'shared-map-ui'),
+        addStyle('map-core-v10.css?v=20260813-3', 'map-core-v10'),
+        addStyle('map-polish-v10.css?v=20260813-3', 'map-polish-v10'),
         addStyle('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.css', 'maptiler-sdk')
       ]);
-      await addScript('app-polish-v10.js?v=20260813-2', 'app-polish-v10');
+      await addScript('app-polish-v10.js?v=20260813-3', 'app-polish-v10');
       await addScript('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.umd.min.js', 'maptiler-sdk');
       await addScript('https://cdn.maptiler.com/maptiler-weather/v3.1.1/maptiler-weather.umd.min.js', 'maptiler-weather');
-      await addScript('weather-runtime-v10.js?v=20260813-2', 'weather-runtime-v10');
-      await addScript('map-core-v10.js?v=20260813-2', 'map-core-v10');
-      await addScript('map-v10-bridge.js?v=20260813-2', 'map-v10-bridge');
-      await addScript('location-accuracy-v10.js?v=20260813-2', 'location-accuracy-v10');
-      await addScript('storm-composite-v10.js?v=20260813-2', 'storm-composite-v10');
+      await addScript('weather-runtime-v11.js?v=20260813-3', 'weather-runtime-v11');
+      await addScript('map-core-v10.js?v=20260813-3', 'map-core-v10');
+      await addScript('map-v10-bridge.js?v=20260813-3', 'map-v10-bridge');
+      await addScript('location-accuracy-v10.js?v=20260813-3', 'location-accuracy-v10');
+      await addScript('storm-composite-v10.js?v=20260813-3', 'storm-composite-v10');
       document.documentElement.dataset.mapEngine = 'v10-pending';
       if (document.getElementById('mapScreen')?.classList.contains('active')) {
         document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'));
