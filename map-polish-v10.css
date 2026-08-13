@@ -1,4 +1,4 @@
-/* StormLens V10.2 interaction polish */
+/* StormLens V10.3 interaction polish */
 #radarTimeline {
   touch-action: none;
   cursor: ew-resize;
@@ -68,6 +68,34 @@
   border-radius:6px;
 }
 
+/* Saved-location management and address search. */
+.saved-location-wrap {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 42px;
+  align-items:center;
+  gap:6px;
+  border-bottom:1px solid rgba(255,255,255,.055);
+}
+.saved-location-wrap .saved-location-row {
+  border-bottom:0;
+  min-width:0;
+}
+.saved-location-remove {
+  width:38px;
+  height:38px;
+  border-radius:13px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.035);
+  color:#7f8da0;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+}
+.saved-location-remove svg { width:16px; height:16px; }
+.saved-location-remove:active { transform:scale(.95); }
+html[data-theme="light"] .saved-location-wrap { border-color:rgba(20,40,60,.08); }
+html[data-theme="light"] .saved-location-remove { border-color:rgba(20,40,60,.09); background:rgba(20,40,60,.04); color:#718294; }
+
 /* Keep the map canvas visually dominant like a dedicated weather app. */
 #weatherMap .maplibregl-canvas { image-rendering:auto; }
 .radar-controller { backdrop-filter: blur(22px) saturate(125%); }
@@ -80,4 +108,5 @@ html[data-theme="light"] .v10-live-legend-labels strong { color:#4e6477; }
   #radarTimeline { min-height:28px; }
   .v10-range-bar button { min-width:43px; }
   .v10-eccc-legend { max-height:36px; }
+  .saved-location-remove { width:40px; height:40px; }
 }
