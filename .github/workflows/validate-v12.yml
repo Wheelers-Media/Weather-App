@@ -1,4 +1,4 @@
-name: Validate StormLens V12
+name: Validate StormLens V14
 
 on:
   push:
@@ -6,30 +6,40 @@ on:
   pull_request:
 
 jobs:
-  validate-v12:
+  validate-v14:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check V12 JavaScript syntax
+      - name: Check JavaScript syntax
         run: |
           node --check premium-details-v12.js
           node --check timeline-history-v12.js
+          node --check timeline-polish-v14.js
+          node --check day-weather-v14.js
+          node --check day-aqi-v14.js
+          node --check responsive-v13.js
           node --check radar-fix.js
           node --check weather-runtime-v11.js
           node --check app-polish-v10.js
+          node --check build-v13.mjs
       - name: Build production output
         env:
           MAPTILER_API_KEY: ci_test_maptiler_key
         run: |
           npm run build
+          node build-v13.mjs
           test -f dist/premium-details-v12.js
-          test -f dist/premium-details-v12.css
-          test -f dist/timeline-history-v12.js
-          test -f dist/timeline-history-v12.css
-          grep -q "premium-details-v12.js" dist/radar-fix.js
-          grep -q "timeline-history-v12.js" dist/radar-fix.js
+          test -f dist/premium-polish-v14.css
+          test -f dist/timeline-polish-v14.js
+          test -f dist/day-weather-v14.js
+          test -f dist/day-aqi-v14.js
+          grep -q "premium-polish-v14.css" dist/index.html
+          grep -q "timeline-polish-v14.js" dist/index.html
+          grep -q "day-weather-v14.js" dist/index.html
+          grep -q "day-aqi-v14.js" dist/index.html
+          grep -q "responsive-v13.css" dist/index.html
           grep -q "Government alerts" dist/premium-details-v12.js
           grep -q "Sun & daylight" dist/premium-details-v12.js
