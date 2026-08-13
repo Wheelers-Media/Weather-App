@@ -28,11 +28,12 @@ const layers = [
 ];
 
 const endpoint = 'https://geo.weather.gc.ca/geomet';
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function check(layer) {
-  const query = new URLSearchParams({ service:'WMS', version:'1.3.0', request:'GetCapabilities', layer });
+  const query = new URLSearchParams({ service:'WMS', version:'1.3.0', request:'GetCapabilities', layer, _:String(Date.now()) });
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), 30000);
   try {
     const response = await fetch(`${endpoint}?${query}`, { signal:controller.signal, headers:{ 'User-Agent':'StormLens-CI/1.0' } });
     const text = await response.text();
@@ -47,8 +48,9 @@ async function check(layer) {
 }
 
 const results = [];
-for (let i = 0; i < layers.length; i += 5) {
-  results.push(...await Promise.all(layers.slice(i, i + 5).map(check)));
+for (const layer of layers) {
+  results.push(await check(layer));
+  await sleep(650);
 }
 
 for (const result of results) {
@@ -57,7 +59,7 @@ for (const result of results) {
 
 const failures = results.filter(result => !result.ok);
 if (failures.length) {
-  console.error(`\n${failures.length} GeoMet layer(s) are unavailable or renamed.`);
+  console.error(`\n${failures.length} GeoMet layer(s) did not answer successfully during this check.`);
   process.exit(1);
 }
 console.log(`\nAll ${results.length} StormLens GeoMet layers are currently published.`);
