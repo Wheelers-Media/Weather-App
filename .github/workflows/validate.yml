@@ -19,6 +19,7 @@ jobs:
           node --check radar-fix.js
           node --check map-core-v10.js
           node --check map-v10-bridge.js
+          node --check location-accuracy-v10.js
           node --check storm-composite-v10.js
           node --check premium-home.js
           node --check sw.js
@@ -35,7 +36,7 @@ jobs:
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
-      - name: Test V10.1 production build
+      - name: Test V10.2 production build
         env:
           MAPTILER_API_KEY: ci_test_maptiler_key
         run: |
@@ -45,23 +46,32 @@ jobs:
           test -f dist/map-core-v10.css
           test -f dist/map-polish-v10.css
           test -f dist/map-v10-bridge.js
+          test -f dist/location-accuracy-v10.js
           test -f dist/storm-composite-v10.js
           test -f dist/maptiler-env.js
           grep -q "ci_test_maptiler_key" dist/maptiler-env.js
           grep -q "maximum-scale=1" dist/index.html
           grep -q "user-scalable=no" dist/index.html
+          grep -q ">Next 6h<" dist/index.html
+          grep -q ">Storm<" dist/index.html
+          grep -q "getBestDevicePosition" dist/app.js
+          grep -q "maximumAge:0" dist/app.js
           grep -q "document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'))" dist/app.js
           grep -q "document.addEventListener('stormlens:map-screen-visible'" dist/map-core-v10.js
           grep -q "StormLensMapV10" dist/map-core-v10.js
           grep -q "stormlens-user-location-dot" dist/map-core-v10.js
           grep -q "Radar forecast" dist/map-core-v10.js
-          grep -q "title:'Nowcast'.*provider:'maptiler'" dist/map-core-v10.js
+          grep -q "title:'Short-range radar'.*provider:'maptiler'" dist/map-core-v10.js
+          grep -q "title:'Official radar nowcast'.*provider:'eccc'" dist/map-core-v10.js
           grep -q "title:'Storm'.*provider:'maptiler'" dist/map-core-v10.js
           grep -q "if(key==='lightning')return'lightning'" dist/map-core-v10.js
           grep -q "if(key==='storms')return'storm'" dist/map-core-v10.js
           grep -q "WIDTH:size,HEIGHT:size" dist/map-core-v10.js
           grep -q "slider.addEventListener('change'" dist/map-core-v10.js
           grep -q "bufferRaster(5)" dist/map-core-v10.js
+          grep -q "getCanvasStrip" dist/map-core-v10.js
+          grep -q "GetLegendGraphic" dist/map-core-v10.js
+          grep -q "stormlens-location-accuracy-source" dist/location-accuracy-v10.js
           grep -q "stormlens-storm-lightning-density" dist/storm-composite-v10.js
           grep -q "navigator.vibrate" dist/storm-composite-v10.js
           if grep -q "window.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'))" dist/app.js; then echo "V10 map-visible event emitted on wrong target"; exit 1; fi
