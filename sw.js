@@ -1,5 +1,5 @@
-const CACHE='stormlens-v10-map-polish-20260812-1';
-const APP=['./','./index.html','./styles.css','./desktop.css','./map-v6.css','./map-core-v10.css','./map-polish-v10.css','./app.js','./radar-fix.js','./map-core-v10.js','./map-v10-bridge.js','./storm-composite-v10.js','./maptiler-env.js','./premium-home.js','./manifest.json','./icon-192.png','./icon-512.png'];
+const CACHE='stormlens-v10-map-polish-20260812-2';
+const APP=['./','./index.html','./styles.css','./desktop.css','./map-v6.css','./map-core-v10.css','./map-polish-v10.css','./app.js','./radar-fix.js','./map-core-v10.js','./map-v10-bridge.js','./location-accuracy-v10.js','./storm-composite-v10.js','./maptiler-env.js','./premium-home.js','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP)));
