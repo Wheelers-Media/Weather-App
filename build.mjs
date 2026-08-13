@@ -242,9 +242,9 @@ core = replaceRequired(
       const wrap=el.querySelector('.v10-live-legend');
       wrap.insertBefore(canvas,wrap.firstChild);
       const labels=wrap.querySelector('.v10-live-legend-labels');
-      labels.children[0].textContent=Number.isFinite(min)?\`${Math.round(min)} ${unit}\`.trim():'';
+      labels.children[0].textContent=Number.isFinite(min)?(Math.round(min)+' '+unit).trim():'';
       labels.children[1].textContent=def.title;
-      labels.children[2].textContent=Number.isFinite(max)?\`${Math.round(max)} ${unit}\`.trim():'';
+      labels.children[2].textContent=Number.isFinite(max)?(Math.round(max)+' '+unit).trim():'';
       return true;
     } catch (_) { return false; }
   }
@@ -255,8 +255,8 @@ core = replaceRequired(
     if(def.style)p.set('STYLE',def.style);
     const img=document.createElement('img');
     img.className='v10-eccc-legend';
-    img.alt=\`${def.title} legend\`;
-    img.src=\`${WMS}\${p.toString()}\`;
+    img.alt=def.title+' legend';
+    img.src=WMS+p.toString();
     el.innerHTML='';el.appendChild(img);return true;
   }
 
@@ -266,9 +266,9 @@ core = replaceRequired(
     else if(def.provider==='eccc'&&renderEcccLegend(el,def)){}
     else if(def.field==='thunderstormProbability') el.innerHTML='<span><b class="legend-dot v10-blue"></b>10%</span><span><b class="legend-dot v10-yellow"></b>55%</span><span><b class="legend-dot v10-red"></b>85%</span><span><b class="legend-dot v10-purple"></b>100%</span>';
     else if(def.field==='precipitationIntensity') el.innerHTML='<span><b class="legend-dot v10-blue"></b>1 mm/h</span><span><b class="legend-dot v10-yellow"></b>8 mm/h</span><span><b class="legend-dot v10-red"></b>30 mm/h</span><span><b class="legend-dot v10-purple"></b>50+ mm/h</span>';
-    else el.innerHTML=\`<span>\${escapeHtml(def.title)}</span>\`;
+    else el.innerHTML='<span>'+escapeHtml(def.title)+'</span>';
     const source=$('#radarSourceLine');
-    if(source) source.textContent=\`\${def.title} · \${def.provider==='maptiler'?'MapTiler Weather':def.provider==='tomorrow'?'Tomorrow.io':'Environment and Climate Change Canada'}\`;
+    if(source) source.textContent=def.title+' · '+(def.provider==='maptiler'?'MapTiler Weather':def.provider==='tomorrow'?'Tomorrow.io':'Environment and Climate Change Canada');
   }`,
   'provider accurate legends'
 );
