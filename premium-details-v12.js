@@ -26,7 +26,6 @@
   }
   function windUnit(){return ({kmh:'km/h',mph:'mph',kn:'kt',ms:'m/s'})[settings().windUnit]||'km/h';}
   function tempUnit(){return settings().tempUnit==='fahrenheit'?'fahrenheit':'celsius';}
-  function tempSymbol(){return tempUnit()==='fahrenheit'?'°F':'°C';}
   function round(v){return Number.isFinite(Number(v))?Math.round(Number(v)):'—';}
   function average(values){const valid=values.map(Number).filter(Number.isFinite);return valid.length?valid.reduce((a,b)=>a+b,0)/valid.length:NaN;}
   function formatTime(v){if(!v)return'—';return new Date(v).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}
@@ -71,9 +70,7 @@
     forecastCache=data;forecastSignature=sig;return data;
   }
 
-  function hourlyIndicesForDate(data,date){
-    const indices=[];data.hourly.time.forEach((t,i)=>{if(String(t).slice(0,10)===date)indices.push(i);});return indices;
-  }
+  function hourlyIndicesForDate(data,date){const indices=[];data.hourly.time.forEach((t,i)=>{if(String(t).slice(0,10)===date)indices.push(i);});return indices;}
   function dayExpectation(data,index,hourIndices){
     const d=data.daily,cond=condition(d.weather_code[index]);
     const chance=Number(d.precipitation_probability_max?.[index]||0),amount=Number(d.precipitation_sum?.[index]||0),gust=Number(d.wind_gusts_10m_max?.[index]||0),uv=Number(d.uv_index_max?.[index]||0);
@@ -151,7 +148,10 @@
   function renderAlertHub(){
     const home=$('#homeContent');if(!home)return;
     let hub=$('#v12AlertHub');if(!hub){hub=document.createElement('div');hub.id='v12AlertHub';hub.className='v12-alert-hub';const anchor=home.querySelector('.active-alerts')||home.querySelector('.hero');if(anchor)anchor.insertAdjacentElement('afterend',hub);else home.prepend(hub);}
-    const count=alertCache.length;hub.classList.toggle('has-alerts',count>0);hub.innerHTML=`<button type="button" id="v12AlertHubButton"><span class="v12-alert-icon"><i data-lucide="${count?'triangle-alert':'shield-check'}"></i></span><span class="v12-alert-copy"><strong>${count?`${count} official weather alert${count===1?'':'s'}`:'Official weather alerts'}</strong><small>${count?'Warnings, watches, advisories or statements affect this location.':'No active ECCC warning, watch, advisory or statement for this location.'}</small></span><span class="v12-alert-count">${count}</span><i data-lucide="chevron-right"></i></button>`;
+    const count=alertCache.length,signature=`${locSig()}:${count}:${alertsFetchedAt?alertsFetchedAt.getTime():0}`;
+    if(hub.dataset.v12Signature===signature)return;
+    hub.dataset.v12Signature=signature;
+    hub.classList.toggle('has-alerts',count>0);hub.innerHTML=`<button type="button" id="v12AlertHubButton"><span class="v12-alert-icon"><i data-lucide="${count?'triangle-alert':'shield-check'}"></i></span><span class="v12-alert-copy"><strong>${count?`${count} official weather alert${count===1?'':'s'}`:'Official weather alerts'}</strong><small>${count?'Warnings, watches, advisories or statements affect this location.':'No active ECCC warning, watch, advisory or statement for this location.'}</small></span><span class="v12-alert-count">${count}</span><i data-lucide="chevron-right"></i></button>`;
     $('#v12AlertHubButton')?.addEventListener('click',showAlerts);refreshIcons();
   }
 
@@ -171,9 +171,7 @@
     document.addEventListener('keydown',event=>{const row=event.target.closest?.('.day-row[data-v12-day]');if(row&&(event.key==='Enter'||event.key===' ')){event.preventDefault();showDay(Number(row.dataset.v12Day));}});
   }
 
-  async function refreshAlerts(){
-    try{await loadOfficialAlerts();renderAlertHub();}catch(_){renderAlertHub();}
-  }
+  async function refreshAlerts(){try{await loadOfficialAlerts();renderAlertHub();}catch(_){renderAlertHub();}}
   function observeApp(){
     const observer=new MutationObserver(()=>{decorateDailyRows();renderAlertHub();const sig=locSig();if(sig!==locationSignature){locationSignature=sig;forecastCache=null;forecastSignature='';clearTimeout(alertTimer);alertTimer=setTimeout(refreshAlerts,350);}});
     observer.observe(document.body,{childList:true,subtree:true});
