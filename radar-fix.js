@@ -75,6 +75,17 @@
     }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
-  else boot();
+  let booted = false;
+  function lazyBoot() {
+    if (booted) return;
+    booted = true;
+    boot();
+  }
+
+  document.addEventListener('stormlens:map-screen-visible', lazyBoot, { once: true });
+
+  if (document.getElementById('mapScreen')?.classList.contains('active')) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', lazyBoot, { once: true });
+    else lazyBoot();
+  }
 })();

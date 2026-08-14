@@ -156,6 +156,7 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.dataset.screen === target));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.target === target));
     if (target === 'map') {
+      document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'));
       setTimeout(() => {
         initMap();
         state.map && state.map.invalidateSize();
