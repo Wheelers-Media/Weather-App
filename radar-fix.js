@@ -49,16 +49,22 @@
         addStyle('timeline-history-v12.css?v=20260813-1', 'timeline-history-v12'),
         addStyle('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.css', 'maptiler-sdk')
       ]);
-      await addScript('app-polish-v10.js?v=20260813-5', 'app-polish-v10');
-      await addScript('premium-details-v12.js?v=20260813-2', 'premium-details-v12');
-      await addScript('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.umd.min.js', 'maptiler-sdk');
+      await Promise.all([
+        addScript('app-polish-v10.js?v=20260813-5', 'app-polish-v10'),
+        addScript('premium-details-v12.js?v=20260813-2', 'premium-details-v12'),
+        addScript('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.umd.min.js', 'maptiler-sdk')
+      ]);
       await addScript('https://cdn.maptiler.com/maptiler-weather/v3.1.1/maptiler-weather.umd.min.js', 'maptiler-weather');
-      await addScript('weather-runtime-v11.js?v=20260813-5', 'weather-runtime-v11');
-      await addScript('map-core-v10.js?v=20260813-5', 'map-core-v10');
-      await addScript('timeline-history-v12.js?v=20260813-1', 'timeline-history-v12');
+      await Promise.all([
+        addScript('weather-runtime-v11.js?v=20260813-5', 'weather-runtime-v11'),
+        addScript('map-core-v10.js?v=20260813-5', 'map-core-v10'),
+        addScript('timeline-history-v12.js?v=20260813-1', 'timeline-history-v12')
+      ]);
       await addScript('map-v10-bridge.js?v=20260813-5', 'map-v10-bridge');
-      await addScript('location-accuracy-v10.js?v=20260813-5', 'location-accuracy-v10');
-      await addScript('storm-composite-v10.js?v=20260813-5', 'storm-composite-v10');
+      await Promise.all([
+        addScript('location-accuracy-v10.js?v=20260813-5', 'location-accuracy-v10'),
+        addScript('storm-composite-v10.js?v=20260813-5', 'storm-composite-v10')
+      ]);
       document.documentElement.dataset.mapEngine = 'v10-pending';
       if (document.getElementById('mapScreen')?.classList.contains('active')) {
         document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'));

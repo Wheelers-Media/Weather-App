@@ -1,4 +1,5 @@
 (() => {
+  const requestIdleCallback = window.requestIdleCallback || (cb => setTimeout(cb, 50));
   const DEFAULT_LOCATION = {
     name: 'Calgary', admin1: 'Alberta', country: 'Canada', countryCode: 'CA', provinceCode: 'AB',
     latitude: 51.0447, longitude: -114.0719, timezone: 'America/Edmonton', source: 'default'
@@ -140,8 +141,11 @@
     });
   }
 
+  let _iconRafId = 0;
   function refreshIcons() {
-    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+    if (!window.lucide) return;
+    if (_iconRafId) return;
+    _iconRafId = requestAnimationFrame(() => { _iconRafId = 0; lucide.createIcons(); });
   }
 
   function bindNavigation() {
@@ -157,8 +161,12 @@
         state.map && state.map.invalidateSize();
       }, 80);
     }
-    if (target === 'forecast') renderForecast();
-    if (target === 'storms') renderStorms();
+    if (target === 'forecast' || target === 'storms') {
+      requestAnimationFrame(() => {
+        if (target === 'forecast') renderForecast();
+        else renderStorms();
+      });
+    }
     refreshIcons();
   }
 
@@ -388,15 +396,21 @@
         state.alertsFetchedAt = new Date();
       }
 
-      localStorage.setItem('stormlens-weather-cache', JSON.stringify({
-        data: state.weather,
-        airQuality: state.airQuality,
-        alerts: state.alerts,
-        location:state.location,
-        fetchedAt:state.fetchedAt.toISOString()
-      }));
+      requestIdleCallback(() => {
+        try { localStorage.setItem('stormlens-weather-cache', JSON.stringify({
+          data: state.weather,
+          airQuality: state.airQuality,
+          alerts: state.alerts,
+          location:state.location,
+          fetchedAt:state.fetchedAt.toISOString()
+        })); } catch(_) {}
+      }, { timeout: 2000 });
 
-      renderHome(); renderForecast(); renderStorms();
+      _forecastRenderedFor = null;
+      _stormsRenderedFor = null;
+      renderHome();
+      if (activeScreen() === 'forecast') renderForecast();
+      if (activeScreen() === 'storms') renderStorms();
       if (state.map && state.alertsEnabled) renderLocalAlertPolygons();
     } catch (err) {
       const cache = JSON.parse(localStorage.getItem('stormlens-weather-cache') || 'null');
@@ -405,7 +419,11 @@
         state.airQuality = cache.airQuality || null;
         state.alerts = cache.alerts || [];
         state.fetchedAt = new Date(cache.fetchedAt);
-        renderHome(); renderForecast(); renderStorms();
+        _forecastRenderedFor = null;
+        _stormsRenderedFor = null;
+        renderHome();
+        if (activeScreen() === 'forecast') renderForecast();
+        if (activeScreen() === 'storms') renderStorms();
         toast('Live update failed. Showing cached weather.');
       } else {
         home.innerHTML = `<div class="error-card" style="margin-top:20px"><h3>Weather could not load</h3><p>${escapeHtml(err.message)}. Check your connection and try again.</p><button id="retryWeather">Try again</button></div>`;
@@ -613,26 +631,36 @@
     return `<div class="precip-bars">${bars}</div><div class="precip-ticks"><span>Now</span><span>+3h</span><span>+6h</span><span>+12h</span></div>`;
   }
 
+  const SVG_DROPLET = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>';
   function renderHourlyItems(nowIdx) {
     const h=state.weather.hourly; let out='';
     for (let i=nowIdx;i<Math.min(nowIdx+24,h.time.length);i++) {
       const cond=weatherCondition(h.weather_code[i], true);
-      out += `<div class="hour-item ${i===nowIdx?'now':''}"><div class="hour-time">${i===nowIdx?'NOW':formatHour(h.time[i])}</div><div class="hour-icon"><i data-lucide="${cond.icon}"></i></div><strong>${round(h.temperature_2m[i])}°</strong><div class="rain-chance"><i data-lucide="droplet"></i>${round(h.precipitation_probability[i]||0)}%</div></div>`;
+      out += `<div class="hour-item ${i===nowIdx?'now':''}"><div class="hour-time">${i===nowIdx?'NOW':formatHour(h.time[i])}</div><div class="hour-icon"><i data-lucide="${cond.icon}"></i></div><strong>${round(h.temperature_2m[i])}°</strong><div class="rain-chance">${SVG_DROPLET}${round(h.precipitation_probability[i]||0)}%</div></div>`;
     } return out;
   }
 
+  let _dailyRowsCache = null, _dailyRowsKey = null;
   function renderDailyRows() {
-    const d=state.weather.daily; return d.time.map((t,i)=>{
+    const key = state.fetchedAt?.getTime() || 0;
+    if (_dailyRowsKey === key && _dailyRowsCache) return _dailyRowsCache;
+    const d=state.weather.daily; _dailyRowsCache = d.time.map((t,i)=>{
       const cond=weatherCondition(d.weather_code[i],true); const date=new Date(t+'T12:00');
       return `<div class="day-row"><div class="day-name"><strong>${i===0?'Today':date.toLocaleDateString(undefined,{weekday:'short'})}</strong><small>${date.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</small></div><div class="day-icon"><i data-lucide="${cond.icon}"></i></div><div class="day-precip">${round(d.precipitation_probability_max[i]||0)}% <span>${(d.precipitation_sum[i]||0).toFixed(1)} mm</span></div><div class="day-temps"><strong>${round(d.temperature_2m_max[i])}°</strong><span>${round(d.temperature_2m_min[i])}°</span></div></div>`;
     }).join('');
+    _dailyRowsKey = key;
+    return _dailyRowsCache;
   }
 
   function metricCard(icon,label,value,sub) { return `<div class="metric-card"><div class="metric-icon"><i data-lucide="${icon}"></i></div><small>${label}</small><strong>${value}</strong><p>${sub}</p></div>`; }
 
+  let _forecastRenderedFor = null;
   function renderForecast() {
     if (!state.weather) return;
+    const key = state.location.latitude + ',' + state.location.longitude + ',' + (state.fetchedAt?.getTime() || 0);
     const box=$('#forecastContent');
+    if (_forecastRenderedFor === key && box.children.length) return;
+    _forecastRenderedFor = key;
     const h=state.weather.hourly, nowIdx=nearestTimeIndex(h.time,new Date());
     box.innerHTML = `
       <div class="section-title"><div><span class="eyebrow">FORECAST</span><h2>${escapeHtml(state.location.name)}</h2></div></div>
@@ -696,8 +724,13 @@
     const vals=h.temperature_2m.slice(start,start+36),W=650,H=120,min=Math.min(...vals)-1,max=Math.max(...vals)+1,x=i=>6+(i/(vals.length-1))*(W-12),y=v=>8+(1-(v-min)/(max-min))*(H-20); const p=vals.map((v,i)=>`${i?'L':'M'}${x(i)},${y(v)}`).join(' '); return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:120px"><path d="${p}" fill="none" stroke="#9ed0ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   }
 
+  let _stormsRenderedFor = null;
   function renderStorms() {
     if(!state.weather)return;
+    const key = state.location.latitude + ',' + state.location.longitude + ',' + (state.fetchedAt?.getTime() || 0) + ',' + (state.alerts?.length || 0);
+    const box = $('#stormsContent');
+    if (_stormsRenderedFor === key && box.children.length) return;
+    _stormsRenderedFor = key;
     const h=state.weather.hourly;
     const idx=nearestTimeIndex(h.time,new Date());
     const cape=Math.max(...(h.cape?.slice(idx,idx+12)||[0]).filter(Number.isFinite),0);
@@ -926,7 +959,7 @@
   function weatherCondition(code,isDay=true){
     const map={0:['Clear','sun'],1:['Mostly clear','sun'],2:['Partly cloudy','cloud-sun'],3:['Overcast','cloud'],45:['Fog','cloud-fog'],48:['Rime fog','cloud-fog'],51:['Light drizzle','cloud-drizzle'],53:['Drizzle','cloud-drizzle'],55:['Heavy drizzle','cloud-rain'],56:['Freezing drizzle','cloud-hail'],57:['Freezing drizzle','cloud-hail'],61:['Light rain','cloud-rain'],63:['Rain','cloud-rain'],65:['Heavy rain','cloud-rain-wind'],66:['Freezing rain','cloud-hail'],67:['Freezing rain','cloud-hail'],71:['Light snow','cloud-snow'],73:['Snow','cloud-snow'],75:['Heavy snow','snowflake'],77:['Snow grains','snowflake'],80:['Rain showers','cloud-rain'],81:['Rain showers','cloud-rain-wind'],82:['Heavy showers','cloud-rain-wind'],85:['Snow showers','cloud-snow'],86:['Heavy snow showers','snowflake'],95:['Thunderstorm','cloud-lightning'],96:['Thunderstorm + hail','cloud-lightning'],99:['Severe thunderstorm','cloud-lightning']}; const [label,icon]=map[code]||['Variable','cloud']; return{label,icon:(!isDay&&icon==='sun')?'moon':icon};
   }
-  function nearestTimeIndex(arr,date){ const t=date.getTime(); let best=0,d=Infinity; arr.forEach((v,i)=>{const x=Math.abs(new Date(v).getTime()-t);if(x<d){d=x;best=i;}}); return best; }
+  function nearestTimeIndex(arr,date){ const t=date.getTime(); let lo=0,hi=arr.length-1; while(lo<hi){const mid=(lo+hi)>>1;if(new Date(arr[mid]).getTime()<t)lo=mid+1;else hi=mid;} if(lo>0&&Math.abs(new Date(arr[lo-1]).getTime()-t)<Math.abs(new Date(arr[lo]).getTime()-t))return lo-1; return lo; }
   function pressureTrend(idx){ const p=state.weather.hourly.pressure_msl; const prev=p[Math.max(0,idx-3)],cur=p[idx]; const diff=cur-prev; return Math.abs(diff)<.7?'Steady':diff>0?'Rising':'Falling'; }
   function formatVisibility(m){ if(m==null)return'—'; return m>=10000?`${Math.round(m/1000)} km`:`${(m/1000).toFixed(1)} km`; }
   function uvLabel(v){return v<3?'Low':v<6?'Moderate':v<8?'High':v<11?'Very high':'Extreme';}
@@ -936,6 +969,7 @@
   function sum(arr){return arr.reduce((a,b)=>a+(Number(b)||0),0);}
   function toast(msg){ const el=$('#toast');el.textContent=msg;el.hidden=false;clearTimeout(el._t);el._t=setTimeout(()=>el.hidden=true,2800); }
   function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+  function activeScreen(){const el=document.querySelector('.screen.active');return el?.dataset?.screen||'home';}
   function $(sel){return document.querySelector(sel);}
 
   document.addEventListener('DOMContentLoaded',init);
