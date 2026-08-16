@@ -25,7 +25,7 @@
 .v12-backdrop[hidden] { display:none; }
 .v12-sheet { width:min(720px,100%); max-height:min(88dvh,900px); overflow:auto; overscroll-behavior:contain; border:1px solid var(--border); border-radius:30px; background:var(--panel, var(--card)); color:var(--text); box-shadow:0 20px 60px rgba(0,0,0,.28); }
 .v12-sheet-handle { width:42px; height:5px; border-radius:99px; background:var(--border); margin:10px auto 2px; }
-.v12-sheet-head { position:sticky; top:0; z-index:3; display:flex; justify-content:space-between; gap:16px; align-items:flex-start; padding:14px 20px 16px; background:color-mix(in srgb, var(--panel, var(--card)) 92%, transparent); backdrop-filter:blur(18px); border-bottom:1px solid var(--border); }
+.v12-sheet-head { position:sticky; top:0; z-index:3; display:flex; justify-content:space-between; gap:16px; align-items:flex-start; padding:14px 20px 16px; background:var(--panel-solid, #111823); backdrop-filter:blur(18px); border-bottom:1px solid var(--border); }
 .v12-sheet-head .eyebrow { display:block; margin-bottom:4px; }
 .v12-sheet-head h2 { margin:0; font-size:24px; line-height:1.1; }
 .v12-sheet-head p { margin:5px 0 0; color:var(--muted); font-size:12px; }
