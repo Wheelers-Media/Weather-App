@@ -53,19 +53,7 @@
   localStorage.setItem('stormlens-location', JSON.stringify(state.location));
   localStorage.setItem('stormlens-saved', JSON.stringify(state.savedLocations));
 
-  const WMS = 'https://geo.weather.gc.ca/geomet?';
   const ALERTS_API = 'https://api.weather.gc.ca/collections/weather-alerts/items';
-  const LAYERS = {
-    radar: { id: 'RADAR_1KM_RRAI', label: 'Observed radar', mode: 'OBSERVED RADAR', style: 'RADARURPPRECIPR14-LINEAR' },
-    nowcast: { id: 'Radar_1km_RainPrecipRate-Extrapolation', label: 'Radar nowcast', mode: 'RADAR NOWCAST', style: 'RADARURPPRECIPR14-LINEAR' },
-    futureprecip: { id: 'HRDPS.CONTINENTAL_RT', label: 'Future precipitation · 48h', mode: 'FORECAST PRECIPITATION' },
-    preciptype: { id: 'Radar_1km_SfcPrecipType', label: 'Precipitation type', mode: 'PRECIPITATION TYPE' },
-    precipprob: { id: 'HRDPS-WEonG_2.5km_Precip-Prob', label: 'Precipitation probability', mode: 'FORECAST PROBABILITY' },
-    temperature: { id: 'HRDPS-WEonG_2.5km_AirTemp', label: 'Temperature', mode: 'FORECAST TEMPERATURE' },
-    windgust: { id: 'HRDPS-WEonG_2.5km_WindGust', label: 'Wind gust', mode: 'FORECAST WIND GUSTS' },
-    lightning: { id: 'Lightning_2.5km_Density', label: 'Lightning density', mode: 'LIGHTNING DENSITY', style: 'Lightning' },
-    storms: { id: 'HRDPS-WEonG_2.5km_Thunderstorm-Prob', label: 'Thunderstorm probability', mode: 'THUNDERSTORM FORECAST' }
-  };
 
   const MODEL_ENDPOINTS = {
     auto: 'https://api.open-meteo.com/v1/forecast',
@@ -157,10 +145,6 @@
     document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.target === target));
     if (target === 'map') {
       document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'));
-      setTimeout(() => {
-        initMap();
-        state.map && state.map.invalidateSize();
-      }, 80);
     }
     if (target === 'forecast' || target === 'storms') {
       requestAnimationFrame(() => {
@@ -319,11 +303,6 @@
     }
     closeModal('searchModal'); closeModal('locationsModal');
     updateHeader(); renderSavedLocations(); updateLocationPermissionStatus();
-    if (state.map) {
-      state.map.setView([loc.latitude, loc.longitude], 8);
-      addUserMarker();
-      if (state.alertsEnabled) renderLocalAlertPolygons();
-    }
     loadWeather();
   }
 
@@ -346,8 +325,8 @@
   function bindSettings() {
     $('#tempUnit').addEventListener('change', e => { state.settings.tempUnit = e.target.value; saveSettings(); loadWeather(); });
     $('#windUnit').addEventListener('change', e => { state.settings.windUnit = e.target.value; saveSettings(); loadWeather(); });
-    $('#radarOpacity').addEventListener('input', e => { state.settings.radarOpacity = Number(e.target.value); saveSettings(); if (state.weatherLayer) state.weatherLayer.setOpacity(state.settings.radarOpacity/100); });
-    $('#radarSpeed').addEventListener('change', e => { state.settings.radarSpeed = Number(e.target.value); saveSettings(); if (state.radarTimer) { stopRadar(); playRadar(); } });
+    $('#radarOpacity').addEventListener('input', e => { state.settings.radarOpacity = Number(e.target.value); saveSettings(); });
+    $('#radarSpeed').addEventListener('change', e => { state.settings.radarSpeed = Number(e.target.value); saveSettings(); });
   }
 
   function syncSettingsUI() {
@@ -412,7 +391,6 @@
       renderHome();
       if (activeScreen() === 'forecast') renderForecast();
       if (activeScreen() === 'storms') renderStorms();
-      if (state.map && state.alertsEnabled) renderLocalAlertPolygons();
     } catch (err) {
       const cache = JSON.parse(localStorage.getItem('stormlens-weather-cache') || 'null');
       if (cache?.data && cache?.location && Math.abs(cache.location.latitude-state.location.latitude)<.01 && Math.abs(cache.location.longitude-state.location.longitude)<.01) {
@@ -766,8 +744,8 @@
         <p style="margin:0;color:var(--muted);font-size:12px;line-height:1.6">The map uses official ECCC radar, radar extrapolation nowcast, lightning-density analysis, thunderstorm-probability guidance and alert polygons. Lightning is displayed as density data, not invented strike counts.</p>
       </article>`;
 
-    $('#openStormMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>setMapLayer('storms'),120); });
-    $('#openLightningMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>setMapLayer('lightning'),120); });
+    $('#openStormMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>document.dispatchEvent(new CustomEvent('stormlens:map-select-layer',{detail:{id:'storms'}})),120); });
+    $('#openLightningMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>document.dispatchEvent(new CustomEvent('stormlens:map-select-layer',{detail:{id:'lightning'}})),120); });
     bindAlertCards($('#stormsContent'));
     refreshIcons();
   }
@@ -776,151 +754,6 @@
   function stormRisk(cape,pop,codes){ const thunder=codes.some(c=>c>=95); if(thunder||cape>1600) return {headline:'Storm environment is active',summary:'Forecast guidance supports meaningful thunderstorm potential. Use the radar and official alert layers for timing and severity.'}; if(cape>700&&pop>45)return{headline:'Storms are possible',summary:'Instability and precipitation overlap in the near-term forecast. Convective development is worth watching.'}; if(cape>250)return{headline:'Low-end storm potential',summary:'Some instability is present, but the signal is not strong enough to call for an active storm setup.'}; return{headline:'No strong storm signal',summary:'The near-term forecast does not show a significant convective signal at your selected location.'}; }
   function renderOutlooks(idx){ const h=state.weather.hourly; const blocks=[['Today',idx,idx+12],['Tonight',idx+12,idx+24],['Tomorrow',idx+24,idx+48]]; return blocks.map(([name,a,b])=>{ const cape=Math.max(...(h.cape?.slice(a,b)||[0]).filter(Number.isFinite),0), pop=Math.max(...h.precipitation_probability.slice(a,b),0), r=stormRiskLevel(cape,pop,h.weather_code.slice(a,b)); return `<div class="outlook-day"><small>${name}</small><span class="risk-pill risk-${r.className}">${r.label}</span></div>`; }).join(''); }
   function stormRiskLevel(cape,pop,codes){ if(codes.some(c=>c>=96)||cape>1800)return{label:'HIGH',className:'high'};if(codes.some(c=>c>=95)||cape>900&&pop>50)return{label:'MODERATE',className:'moderate'};if(cape>350&&pop>30)return{label:'LOW',className:'low'};return{label:'NONE',className:'none'}; }
-
-  function initMap() {
-    if(state.map) return;
-    state.map = L.map('weatherMap',{ zoomControl:false, preferCanvas:true }).setView([state.location.latitude,state.location.longitude],7);
-    state.baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{ attribution:'© OpenStreetMap © CARTO', maxZoom:19 }).addTo(state.map);
-    bindMapControls();
-    setMapLayer('radar');
-    addUserMarker();
-  }
-
-  function addUserMarker(){ if(!state.map)return; if(state.userMarker) state.map.removeLayer(state.userMarker); state.userMarker=L.circleMarker([state.location.latitude,state.location.longitude],{radius:6,color:'#d9efff',weight:2,fillColor:'#6eb8ff',fillOpacity:1}).addTo(state.map); }
-
-  function bindMapControls() {
-    $('#recenterBtn').addEventListener('click',()=>state.map.flyTo([state.location.latitude,state.location.longitude],8,{duration:.7}));
-    document.querySelectorAll('#quickLayers [data-layer]').forEach(btn=>btn.addEventListener('click',()=>{
-      const l=btn.dataset.layer; if(l==='layers') return openModal('layersModal'); if(l==='alerts') { toggleAlerts(); return; } setMapLayer(l);
-    }));
-    document.querySelectorAll('[data-select-layer]').forEach(btn=>btn.addEventListener('click',()=>{setMapLayer(btn.dataset.selectLayer);closeModal('layersModal');}));
-    document.querySelector('[data-toggle-alerts]').addEventListener('click',()=>toggleAlerts());
-    $('#radarPlay').addEventListener('click',()=> state.radarTimer ? stopRadar() : playRadar());
-    $('#radarStepBack').addEventListener('click',()=>stepRadar(-1));
-    $('#radarStepForward').addEventListener('click',()=>stepRadar(1));
-    $('#radarTimeline').addEventListener('input',e=>{ state.radarIndex=Number(e.target.value); applyRadarTime(); });
-  }
-
-  async function setMapLayer(key) {
-    if(!state.map || !LAYERS[key]) return;
-    stopRadar(); state.activeMapLayer=key;
-    if(state.weatherLayer) state.map.removeLayer(state.weatherLayer);
-    const cfg=LAYERS[key];
-    state.weatherLayer=L.tileLayer.wms(WMS,{
-      layers:cfg.id,
-      styles:cfg.style || '',
-      format:'image/png',
-      transparent:true,
-      opacity:state.settings.radarOpacity/100,
-      version:'1.3.0',
-      uppercase:true
-    }).addTo(state.map);
-    $('#mapLayerStatus').textContent=cfg.label;
-    $('#radarModeLabel').textContent=cfg.mode;
-    $('#timelineStartLabel').textContent=['futureprecip','storms','precipprob','temperature','windgust'].includes(key) ? 'NOW' : 'PAST';
-    document.querySelectorAll('#quickLayers [data-layer]').forEach(b=>b.classList.toggle('active',b.dataset.layer===key));
-    document.querySelectorAll('[data-select-layer]').forEach(b=>b.classList.toggle('active',b.dataset.selectLayer===key));
-    await loadLayerTimes(cfg.id);
-    updateMapLegend(key);
-    refreshIcons();
-  }
-
-  async function loadLayerTimes(layerId) {
-    const ts=$('#radarTimestamp'); ts.textContent='Loading timeline…';
-    try {
-      const url=`https://geo.weather.gc.ca/geomet?service=WMS&version=1.3.0&request=GetCapabilities&layer=${encodeURIComponent(layerId)}`;
-      const res=await fetch(url); if(!res.ok) throw new Error('Timeline unavailable'); const xmlText=await res.text(); const parser=new DOMParser(); const xml=parser.parseFromString(xmlText,'application/xml');
-      const layerNodes=[...xml.querySelectorAll('Layer')]; let target=null; for(const node of layerNodes){const name=node.querySelector(':scope > Name')?.textContent;if(name===layerId){target=node;break;}}
-      const dim=target?.querySelector('Dimension[name="time"], Extent[name="time"]');
-      state.radarTimes=parseTimeDimension(dim?.textContent?.trim()||'');
-      if(!state.radarTimes.length) { state.radarIndex=0; $('#radarTimeline').max=0; $('#radarTimeline').value=0; ts.textContent='Latest available'; return; }
-      const forecastLike=['nowcast','futureprecip','storms','precipprob','temperature','windgust'].includes(state.activeMapLayer);
-      state.radarIndex=forecastLike ? nearestTimeIndex(state.radarTimes,new Date()) : state.radarTimes.length-1;
-      $('#radarTimeline').min=0; $('#radarTimeline').max=state.radarTimes.length-1; $('#radarTimeline').value=state.radarIndex; applyRadarTime();
-    } catch(err) { state.radarTimes=[]; ts.textContent='Latest available'; }
-  }
-
-  function parseTimeDimension(text) {
-    if(!text)return[];
-    const parts=text.split(',').map(s=>s.trim()).filter(Boolean); const out=[];
-    for(const p of parts){
-      if(p.includes('/')){
-        const [startS,endS,periodS]=p.split('/'); const start=new Date(startS),end=new Date(endS),step=parseISODuration(periodS||'PT6M'); if(!isNaN(start)&&!isNaN(end)&&step>0){ for(let t=start.getTime(), guard=0;t<=end.getTime()&&guard<1000;t+=step,guard++) out.push(new Date(t).toISOString()); }
-      } else { const d=new Date(p); if(!isNaN(d)) out.push(d.toISOString()); }
-    }
-    return [...new Set(out)].sort();
-  }
-
-  function parseISODuration(v){ if(!v)return 360000; const m=v.match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/); if(!m)return 360000; return (((+m[1]||0)*24+(+m[2]||0))*60+(+m[3]||0))*60000+(+m[4]||0)*1000; }
-
-  function applyRadarTime(){
-    if(!state.radarTimes.length||!state.weatherLayer)return;
-    const time=state.radarTimes[state.radarIndex];
-    state.weatherLayer.setParams({time},false);
-    $('#radarTimeline').value=state.radarIndex;
-    const d=new Date(time);
-    const deltaMin=Math.round((d.getTime()-Date.now())/60000);
-    const cfg=LAYERS[state.activeMapLayer];
-    let mode=cfg?.mode || 'WEATHER LAYER';
-    if(state.activeMapLayer==='nowcast') mode=deltaMin > 0 ? 'FORECAST NOWCAST' : 'OBSERVED / NOWCAST';
-    if(state.activeMapLayer==='radar') mode='OBSERVED RADAR';
-    $('#radarModeLabel').textContent=mode;
-    $('#radarTimestamp').textContent=d.toLocaleString(undefined,{weekday:'short',hour:'numeric',minute:'2-digit'});
-    $('#timelineNowLabel').textContent=deltaMin > 6 ? `+${deltaMin} MIN` : deltaMin < -6 ? `${Math.abs(deltaMin)} MIN AGO` : 'NOW';
-  }
-  function stepRadar(dir){ if(!state.radarTimes.length)return; state.radarIndex=Math.max(0,Math.min(state.radarTimes.length-1,state.radarIndex+dir));applyRadarTime(); }
-  function playRadar(){ if(!state.radarTimes.length)return; if(state.radarIndex>=state.radarTimes.length-1) state.radarIndex=0; state.radarTimer=setInterval(()=>{ if(state.radarIndex>=state.radarTimes.length-1) state.radarIndex=0; else state.radarIndex++; applyRadarTime(); },state.settings.radarSpeed); $('#radarPlay').innerHTML='<i data-lucide="pause"></i>'; refreshIcons(); }
-  function stopRadar(){ if(state.radarTimer){clearInterval(state.radarTimer);state.radarTimer=null;} const b=$('#radarPlay'); if(b)b.innerHTML='<i data-lucide="play"></i>'; refreshIcons(); }
-
-  function updateMapLegend(key){ const el=$('#radarLegend'); if(key==='lightning') el.innerHTML='<span>Density of detected lightning activity</span>'; else if(key==='storms') el.innerHTML='<span>Forecast thunderstorm probability from ECCC guidance</span>'; else el.innerHTML='<span><b class="legend-dot l1"></b>Light</span><span><b class="legend-dot l2"></b>Moderate</span><span><b class="legend-dot l3"></b>Heavy</span><span><b class="legend-dot l4"></b>Intense</span>'; }
-
-  function toggleAlerts() {
-    if(!state.map)return;
-    state.alertsEnabled=!state.alertsEnabled;
-    document.querySelectorAll('[data-layer="alerts"], [data-toggle-alerts]').forEach(b=>b.classList.toggle('active',state.alertsEnabled));
-    if(state.alertsEnabled){
-      state.alertsLayer=L.tileLayer.wms(WMS,{
-        layers:'Current-Alerts',
-        styles:'Current-Alerts',
-        format:'image/png',
-        transparent:true,
-        opacity:.92,
-        version:'1.3.0',
-        uppercase:true
-      }).addTo(state.map);
-      renderLocalAlertPolygons();
-      toast(state.alerts.length ? `${state.alerts.length} local ECCC alert${state.alerts.length===1?'':'s'} found.` : 'Official ECCC alert layer enabled.');
-    } else {
-      if(state.alertsLayer){state.map.removeLayer(state.alertsLayer);state.alertsLayer=null;}
-      if(state.localAlertGeoLayer){state.map.removeLayer(state.localAlertGeoLayer);state.localAlertGeoLayer=null;}
-    }
-  }
-
-  function renderLocalAlertPolygons() {
-    if (!state.map) return;
-    if (state.localAlertGeoLayer) {
-      state.map.removeLayer(state.localAlertGeoLayer);
-      state.localAlertGeoLayer = null;
-    }
-    const features = (state.alerts || []).filter(f => f.geometry);
-    if (!features.length || !state.alertsEnabled) return;
-    state.localAlertGeoLayer = L.geoJSON({ type:'FeatureCollection', features }, {
-      style: feature => {
-        const level = alertRiskClass(feature.properties || {});
-        const colours = {
-          warning:'#ff566b',
-          watch:'#ff9f43',
-          advisory:'#ffd85b',
-          statement:'#77baff'
-        };
-        return { color:colours[level] || '#77baff', weight:2, fillOpacity:.08, opacity:.95 };
-      },
-      onEachFeature: (feature, layer) => {
-        const p = feature.properties || {};
-        layer.bindPopup(`<strong>${escapeHtml(p.alert_name_en || 'Weather alert')}</strong><br>${escapeHtml(p.feature_name_en || state.location.name)}`);
-      }
-    }).addTo(state.map);
-  }
 
   function geometryContainsPoint(geometry, point) {
     if (!geometry || !point) return false;

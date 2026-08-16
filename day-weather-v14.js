@@ -142,5 +142,7 @@
     const row = event.target.closest?.('.day-row[data-v12-day]');
     if (row && (event.key === 'Enter' || event.key === ' ')) selectRow(row);
   },true);
-  new MutationObserver(() => requestAnimationFrame(enhance)).observe(document.body,{childList:true,subtree:true});
+  const scheduleEnhance = () => requestAnimationFrame(enhance);
+  if (window.StormLensAppObserve) window.StormLensAppObserve(scheduleEnhance);
+  else new MutationObserver(scheduleEnhance).observe(document.body,{childList:true,subtree:true});
 })();

@@ -45,13 +45,11 @@
         addStyle('map-v6.css?v=20260813-5', 'shared-map-ui'),
         addStyle('map-core-v10.css?v=20260813-5', 'map-core-v10'),
         addStyle('map-polish-v10.css?v=20260813-5', 'map-polish-v10'),
-        addStyle('premium-details-v12.css?v=20260813-2', 'premium-details-v12'),
         addStyle('timeline-history-v12.css?v=20260813-1', 'timeline-history-v12'),
         addStyle('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.css', 'maptiler-sdk')
       ]);
       await Promise.all([
         addScript('app-polish-v10.js?v=20260813-5', 'app-polish-v10'),
-        addScript('premium-details-v12.js?v=20260813-2', 'premium-details-v12'),
         addScript('https://cdn.maptiler.com/maptiler-sdk-js/v4.0.2/maptiler-sdk.umd.min.js', 'maptiler-sdk')
       ]);
       await addScript('https://cdn.maptiler.com/maptiler-weather/v3.1.1/maptiler-weather.umd.min.js', 'maptiler-weather');

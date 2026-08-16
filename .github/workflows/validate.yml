@@ -22,7 +22,6 @@ jobs:
           node --check map-v10-bridge.js
           node --check location-accuracy-v10.js
           node --check storm-composite-v10.js
-          node --check premium-home.js
           node --check sw.js
           node --check build.mjs
           node --check build-post-v10.mjs
@@ -85,6 +84,8 @@ jobs:
           if grep -q "window.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'))" dist/app.js; then echo "V10 map-visible event emitted on wrong target"; exit 1; fi
           if grep -q "unpkg.com/leaflet" dist/index.html; then echo "Leaflet still present in production index"; exit 1; fi
           if grep -q "initMap();" dist/app.js; then echo "Legacy map startup still present in production app"; exit 1; fi
+          if grep -q "L\.map(" dist/app.js; then echo "Legacy Leaflet map API still present in production app"; exit 1; fi
+          grep -q "function geometryContainsPoint" dist/app.js
           if grep -q "tomorrowReady?'lightningForecast':'lightning'" dist/map-core-v10.js; then echo "Broken Tomorrow lightning quick target still present"; exit 1; fi
       - name: Validate live ECCC GeoMet layers
         continue-on-error: true

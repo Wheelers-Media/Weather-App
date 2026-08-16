@@ -29,5 +29,7 @@
     const row = event.target.closest?.('.day-row[data-v12-day]');
     if (row && (event.key === 'Enter' || event.key === ' ')) choose(row);
   }, true);
-  new MutationObserver(() => requestAnimationFrame(renderStatus)).observe(document.body,{childList:true,subtree:true});
+  const scheduleStatus = () => requestAnimationFrame(renderStatus);
+  if (window.StormLensAppObserve) window.StormLensAppObserve(scheduleStatus);
+  else new MutationObserver(scheduleStatus).observe(document.body,{childList:true,subtree:true});
 })();

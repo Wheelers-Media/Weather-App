@@ -10,6 +10,7 @@
   let alertsFetchedAt=null;
   let locationSignature='';
   let alertTimer=null;
+  let selectedDayIndex=null;
 
   function refreshIcons(){ if(window.lucide) requestAnimationFrame(()=>window.lucide.createIcons()); }
   function settings(){ try{return JSON.parse(localStorage.getItem('stormlens-settings')||'{}')||{};}catch(_){return{};} }
@@ -84,7 +85,15 @@
     return pieces.join(' ');
   }
 
+  function markSelectedDay(){
+    document.querySelectorAll('.day-row.v12-day-row').forEach(row=>{
+      row.classList.toggle('v12-day-selected', selectedDayIndex!==null && Number(row.dataset.v12Day)===selectedDayIndex);
+    });
+  }
+
   async function showDay(index){
+    selectedDayIndex=Number(index);
+    markSelectedDay();
     ensureSheets();openSheet('v12DayDetail');
     const body=$('#v12DayBody');body.innerHTML='<div class="v12-empty"><i data-lucide="loader-circle"></i><div>Loading detailed forecast…</div></div>';refreshIcons();
     try{
@@ -164,7 +173,7 @@
   async function showAlerts(){ensureSheets();openSheet('v12Alerts');const body=$('#v12AlertsBody');body.innerHTML='<div class="v12-empty"><i data-lucide="loader-circle"></i><div>Checking official alerts…</div></div>';refreshIcons();try{await loadOfficialAlerts();renderAlertHub();renderAlertsSheet();}catch(error){body.innerHTML=`<div class="v12-empty"><i data-lucide="triangle-alert"></i><strong>Official alerts unavailable</strong><div>${escapeHtml(error.message||'Could not contact ECCC.')}</div></div>`;refreshIcons();}}
 
   function decorateDailyRows(){
-    document.querySelectorAll('.daily-list').forEach(list=>{[...list.querySelectorAll('.day-row')].forEach((row,index)=>{if(row.dataset.v12Day)return;row.dataset.v12Day=String(index);row.classList.add('v12-day-row');row.setAttribute('role','button');row.setAttribute('tabindex','0');row.setAttribute('aria-label',`Open details for forecast day ${index+1}`);row.insertAdjacentHTML('beforeend','<i class="v12-day-chevron" data-lucide="chevron-right"></i>');});});refreshIcons();
+    document.querySelectorAll('.daily-list').forEach(list=>{[...list.querySelectorAll('.day-row')].forEach((row,index)=>{if(row.dataset.v12Day)return;row.dataset.v12Day=String(index);row.classList.add('v12-day-row');row.setAttribute('role','button');row.setAttribute('tabindex','0');row.setAttribute('aria-label',`Open details for forecast day ${index+1}`);row.insertAdjacentHTML('beforeend','<i class="v12-day-chevron" data-lucide="chevron-right"></i>');});});markSelectedDay();refreshIcons();
   }
   function bindDayRows(){
     document.addEventListener('click',event=>{const row=event.target.closest?.('.day-row[data-v12-day]');if(row)showDay(Number(row.dataset.v12Day));});
@@ -172,9 +181,14 @@
   }
 
   async function refreshAlerts(){try{await loadOfficialAlerts();renderAlertHub();}catch(_){renderAlertHub();}}
+  function onAppMutation(){
+    decorateDailyRows();renderAlertHub();
+    const sig=locSig();
+    if(sig!==locationSignature){locationSignature=sig;forecastCache=null;forecastSignature='';clearTimeout(alertTimer);alertTimer=setTimeout(refreshAlerts,350);}
+  }
   function observeApp(){
-    const observer=new MutationObserver(()=>{decorateDailyRows();renderAlertHub();const sig=locSig();if(sig!==locationSignature){locationSignature=sig;forecastCache=null;forecastSignature='';clearTimeout(alertTimer);alertTimer=setTimeout(refreshAlerts,350);}});
-    observer.observe(document.body,{childList:true,subtree:true});
+    if(window.StormLensAppObserve) window.StormLensAppObserve(onAppMutation);
+    else new MutationObserver(onAppMutation).observe(document.body,{childList:true,subtree:true});
   }
 
   function init(){ensureSheets();bindDayRows();decorateDailyRows();locationSignature=locSig();renderAlertHub();refreshAlerts();observeApp();}

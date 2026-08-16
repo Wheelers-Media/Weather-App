@@ -30,8 +30,6 @@ html = html.replace(
   'width=device-width, initial-scale=1, viewport-fit=cover',
   'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'
 );
-html = html.replace(/\s*<link rel="stylesheet" href="https:\/\/unpkg\.com\/leaflet@[^>]+>\s*/i, '\n');
-html = html.replace(/\s*<script src="https:\/\/unpkg\.com\/leaflet@[^>]+><\/script>\s*/i, '\n  ');
 html = html.replace('<span>Nowcast</span>', '<span>Next 6h</span>');
 html = html.replace('<span>Storm risk</span>', '<span>Storm</span>');
 if (!html.includes('maptiler-env.js')) {
@@ -39,21 +37,11 @@ if (!html.includes('maptiler-env.js')) {
 }
 await fs.writeFile(indexPath, html, 'utf8');
 
-// Keep the original weather/home application, but remove its legacy Leaflet map ownership.
+// The legacy Leaflet map implementation has been removed from source app.js directly
+// (it was already dead in the deployed build). Remaining patches below are unrelated
+// geolocation-accuracy improvements applied at build time.
 const appPath = path.join(out, 'app.js');
 let app = await fs.readFile(appPath, 'utf8');
-app = app.replace(
-  'initMap();\n        state.map && state.map.invalidateSize();',
-  "document.dispatchEvent(new CustomEvent('stormlens:map-screen-visible'));"
-);
-app = app.replace(
-  "$('#openStormMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>setMapLayer('storms'),120); });",
-  "$('#openStormMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>document.dispatchEvent(new CustomEvent('stormlens:map-select-layer',{detail:{id:'storms'}})),120); });"
-);
-app = app.replace(
-  "$('#openLightningMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>setMapLayer('lightning'),120); });",
-  "$('#openLightningMap')?.addEventListener('click',()=>{ switchScreen('map'); setTimeout(()=>document.dispatchEvent(new CustomEvent('stormlens:map-select-layer',{detail:{id:'lightning'}})),120); });"
-);
 
 app = replaceRequired(
   app,

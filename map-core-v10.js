@@ -79,6 +79,7 @@
   let tomorrowProbeCache = new Map();
   let rasterFrames = new Map();
   let currentRasterKey = null;
+  let rasterRequestToken = 0;
   let valuePill = null;
   let rangePrefs = (() => { try { return JSON.parse(localStorage.getItem(RANGE_KEY) || '{}'); } catch (_) { return {}; } })();
 
@@ -438,7 +439,7 @@
       const template=rasterTemplate(def,date);
       map.addSource(source,{type:'raster',tiles:[template],tileSize:def.provider==='tomorrow'?256:512,minzoom:1,maxzoom:12,attribution:def.provider==='tomorrow'?'Tomorrow.io':'Environment and Climate Change Canada'});
       const spec={id:layer,type:'raster',source,paint:{'raster-opacity':0,'raster-resampling':'linear','raster-fade-duration':120}};const before=firstLabelLayer();if(before)map.addLayer(spec,before);else map.addLayer(spec);
-      const started=performance.now();const poll=()=>{if(!map?.getSource(source)){resolve(false);return;}if(map.isSourceLoaded?.(source)){frame.ready=true;resolve(true);return;}if(performance.now()-started>3500){resolve(false);return;}setTimeout(poll,70);};poll();
+      const started=performance.now();const poll=()=>{if(!map?.getSource(source)){resolve(false);return;}if(map.isSourceLoaded?.(source)){frame.ready=true;resolve(true);return;}if(performance.now()-started>3500){resolve(false);return;}setTimeout(poll,120);};poll();
     });
     rasterFrames.set(key,frame);return frame;
   }
@@ -449,7 +450,9 @@
 
   async function showRasterIndex(index,{quiet=false}={}) {
     if(!active||timeline.mode!=='raster'||!timeline.times.length)return false;index=Math.max(0,Math.min(timeline.times.length-1,index));
+    const requestToken=++rasterRequestToken;
     if(!quiet)setStatus(`${active.def.title} · loading`,'loading');const frame=await ensureRasterFrame(index);if(!frame)return false;await Promise.race([frame.promise,sleep(3600)]);
+    if(requestToken!==rasterRequestToken)return false;
     if(!map?.getLayer(frame.layer))return false;
     const old=currentRasterKey?rasterFrames.get(currentRasterKey):null;map.setPaintProperty(frame.layer,'raster-opacity',opacity());if(old&&old.key!==frame.key&&map.getLayer(old.layer))map.setPaintProperty(old.layer,'raster-opacity',0);map.triggerRepaint?.();currentRasterKey=frame.key;
     timeline.index=index;timeline.current=+timeline.times[index];const slider=$('#radarTimeline');if(slider){slider.value=String(index);updateSliderProgress();}
