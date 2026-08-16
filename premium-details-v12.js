@@ -55,9 +55,10 @@
   function openSheet(id){ensureSheets();const el=$('#'+id);if(!el)return;el.hidden=false;document.body.style.overflow='hidden';refreshIcons();}
   function closeSheet(id){const el=$('#'+id);if(el)el.hidden=true;if([...document.querySelectorAll('.v12-backdrop')].every(x=>x.hidden))document.body.style.overflow='';}
 
+  function forecastSig(){const s=settings();return `${locSig()}:${s.tempUnit||'celsius'}:${s.windUnit||'kmh'}`;}
   async function loadForecast(){
     const loc=locationState(),s=settings();
-    const sig=`${locSig()}:${s.tempUnit||'celsius'}:${s.windUnit||'kmh'}`;
+    const sig=forecastSig();
     if(forecastCache&&forecastSignature===sig)return forecastCache;
     const params=new URLSearchParams({
       latitude:String(loc.latitude),longitude:String(loc.longitude),timezone:'auto',forecast_days:'16',
@@ -95,7 +96,9 @@
     selectedDayIndex=Number(index);
     markSelectedDay();
     ensureSheets();openSheet('v12DayDetail');
-    const body=$('#v12DayBody');body.innerHTML='<div class="v12-empty"><i data-lucide="loader-circle"></i><div>Loading detailed forecast…</div></div>';refreshIcons();
+    const body=$('#v12DayBody');
+    const cached=forecastCache&&forecastSignature===forecastSig();
+    if(!cached){body.innerHTML='<div class="v12-empty"><i data-lucide="loader-circle"></i><div>Loading detailed forecast…</div></div>';refreshIcons();}
     try{
       const data=await loadForecast(),d=data.daily;if(index<0||index>=d.time.length)throw new Error('That forecast day is unavailable.');
       const date=d.time[index],dateObj=new Date(date+'T12:00');const hourIndices=hourlyIndicesForDate(data,date);
@@ -184,13 +187,26 @@
   function onAppMutation(){
     decorateDailyRows();renderAlertHub();
     const sig=locSig();
-    if(sig!==locationSignature){locationSignature=sig;forecastCache=null;forecastSignature='';clearTimeout(alertTimer);alertTimer=setTimeout(refreshAlerts,350);}
+    if(sig!==locationSignature){locationSignature=sig;forecastCache=null;forecastSignature='';clearTimeout(alertTimer);alertTimer=setTimeout(refreshAlerts,350);prefetchForecast();}
   }
   function observeApp(){
     if(window.StormLensAppObserve) window.StormLensAppObserve(onAppMutation);
     else new MutationObserver(onAppMutation).observe(document.body,{childList:true,subtree:true});
   }
 
-  function init(){ensureSheets();bindDayRows();decorateDailyRows();locationSignature=locSig();renderAlertHub();refreshAlerts();observeApp();}
+  // Warm loadForecast()'s cache in the background as soon as the app is
+  // ready, instead of waiting for the user's first day click to trigger it.
+  // The day-detail sheet already opens instantly on click (showDay sets
+  // selectedDayIndex/markSelectedDay/openSheet synchronously) - the part
+  // that felt slow was the network round trip inside loadForecast() only
+  // starting at that point. Prefetching means that by the time someone
+  // actually taps a day, the data is very likely already cached.
+  function prefetchForecast(){
+    const run=()=>{ loadForecast().catch(()=>{}); };
+    if('requestIdleCallback' in window) requestIdleCallback(run,{timeout:2000});
+    else setTimeout(run,300);
+  }
+
+  function init(){ensureSheets();bindDayRows();decorateDailyRows();locationSignature=locSig();renderAlertHub();refreshAlerts();prefetchForecast();observeApp();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

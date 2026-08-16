@@ -152,7 +152,12 @@
         else renderStorms();
       });
     }
-    refreshIcons();
+    // Note: no refreshIcons() here. Each screen's own render function
+    // (renderHome/renderForecast/renderStorms) already calls refreshIcons()
+    // after injecting markup, and switching screens never introduces new
+    // <i data-lucide> nodes on its own. Calling the full-document lucide
+    // icon scan again on every tab switch was pure redundant work and a
+    // real contributor to tab-switch lag.
   }
 
   function bindModals() {
